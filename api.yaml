@@ -1,0 +1,789 @@
+openapi: 3.0.2
+info:
+  title: DBS Programmierpraktikum - Phase 4 - API-Spezifikation
+  description: >-
+    In der folgenden Liste finden Sie die <b>für die Anwendergruppen
+    spezifischen Grundfunktionalitäten</b>. Es müssen <b>alle folgenden
+    allgemeinen Bedingungen</b> eingehalten werden:
+    <ul>
+      <li><b>Bei einer gültigen <code>GET</code>-Anfrage wird ein JSON-Array von JSON-Objekten, wobei ein JSON-Objekt eine Entität darstellt, zurückgegeben</b> und dies mit einem Code <code>200</code> belegt. Wird die <code>GET</code>-Anfrage auf einer nicht vorhandenen Ressource ausgeführt, so wird mit Code <code>404</code> geantwortet. Ist die Ressource woanders zu finden, wird dies mit dem Code <code>301</code> und dem Link im Header belegt. Eine <code>GET</code>-Anfrage auf einer Ressource, die eine Sammlung von Entitäten darstellt, kann durch Übergabe von bestimmten Parametern und dazugehörigen Werten <b>case-insensitive gefiltert</b> werden. Dabei muss jede Entität in der Sammlung allen Parametern gleichzeitig genügen. Die Sammlung wird in der Antwort in ein JSON-Array gekapselt.</li>
+      <li><b>Bei <code>POST</code>-Anfragen werden alle Parameter bis auf diejenigen Parameter der entsprechenden Ressource benötigt, die Standardwerte besitzen.</b> Wird die <code>POST</code>-Anfrage auf einer nicht vorhandenen Ressource ausgeführt, so wird mit Code <code>404</code> geantwortet. Ist die Ressource vorhanden, aber die Anfragen wegen irgendeiner anderen Sache (ungültige Werte, zu wenig Parameter, ...) ungültig, so wird dies mit einem Code <code>400</code> beantwortet, anonsten mit Code <code>201</code> und dem Link zur neuen Ressource im Header belegt.</li>
+      <li><b>Bei <code>PATCH</code>-Anfragen werden nur diejenigen Parameter benötigt, die geändert werden sollen, folglich mindestens einer.</b> Wird die <code>PATCH</code>-Anfrage auf einer nicht vorhandenen Ressource ausgeführt, so wird mit Code <code>404</code> geantwortet. Ist die Ressource vorhanden, aber die Anfragen wegen irgendeiner anderen Sache (ungültige Werte, ...) ungültig, so wird dies mit einem Code <code>400</code> beantwortet, anonsten mit Code <code>204</code> belegt.</li>
+      <li><b>Bei einer gültigen <code>DELETE</code>-Anfrage wird der Code <code>204</code> zurückgegeben.</b> Ist die Ressource nicht vorhanden, wird dies mit Code <code>404</code> belegt.</li>
+      <li><b>Bereiche mit einem Schlosssymbol werden durch eine HTTP-Basisauthentifizierung abgesichert.</b> Wird einer dieser Bereiche ohne oder mit falschen Anmeldedaten aufgerufen, so wird dies mit einem <code>401</code> und dem Header <code>WWW-Authenticate</code> belegt. Sind die Anmeldedaten richtig, aber der Anwender ist nicht authorisiert, so wird dies mit einem Code <code>403</code> belegt.</li>
+      <li><b>In Antworten mit Code <code>4xx</code> wird ein JSON-Objekt, das mindestens den Schlüssel <code>"message"</code> mit dem Wert <code>&lt;Fehlermeldung&gt;</code> enthält, zurückgegeben</b>, wobei <code>&lt;Fehlermeldung&gt;</code> eine für den Umstand entsprechende Fehlermeldung ist. Bei einer auftretenden Exception reicht dafür die Nachricht dieser.</li>
+      <li><b>Antworten auf gültige <code>POST</code>- und <code>PATCH</code>-Anfragen beinhalten nichts.</b></li>
+      <li><b>Anfragen sind vom Typ <code>multipart/form-data</code>, Antworten sind vom Typ <code>application/json;charset=UTF-8</code>.</b></li>
+      <li><b>Datums- und Zeitangaben werden im entsprechenden Standard-SQL-Format übertragen</b> (sowohl in der Anfrage, als auch in der Antwort).</li>
+      <li><b>Passwörter werden der Einfachheit halber im Klartext übergeben.</b></li>
+      <li><b>Die erwähnten IDs sind RowIDs!!!</b></li>
+    </ul>
+  version: 2020.WiSe.1
+servers:
+  - url: 'http://localhost:8080'
+paths:
+  /fahrschueler:
+    post:
+      tags:
+        - Anwender
+      summary: Fügt einen Fahrschüler hinzu.
+      description: >-
+        Ein **Fahrschüler** wird mit den entsprechenden Werten hinzugefügt. Ein zugeordneter User wird ebenfalls angelegt.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/user'
+                - $ref: '#/components/schemas/fahrschueler'
+                - type: object
+                  properties:
+                    adresseid:
+                      type: integer
+                      description: '**RowID der Adresse**.'
+                  required:
+                    - adresseid
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+  /admins:
+    post:
+      tags:
+        - Anwender
+      summary: Fügt einen Administrator hinzu.
+      description: >-
+        Ein **Administrator** wird mit den entsprechenden Werten hinzugefügt. Ein zugeordneter User wird ebenfalls angelegt.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/user'
+                - $ref: '#/components/schemas/admin'
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+  /fahrlehrer:
+    post:
+      tags:
+        - Anwender
+      summary: Fügt einen Fahrlehrer hinzu.
+      description: >-
+        Ein **Fahrlehrer** wird mit den entsprechenden Werten hinzugefügt. Ein zugeordneter User wird ebenfalls angelegt.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/user'
+                - $ref: '#/components/schemas/fahrlehrer'
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+    get:
+      tags:
+        - Anwender
+      summary: Gibt Fahrlehrer zurück.
+      description: >-
+        Alle **Fahrlehrer** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: lizenzdatum
+          in: query
+          description: 'Nur Fahrlerer, deren **Lizenzdatum** >= `lizenzdatum` ist, werden zurückgegeben.'
+          schema:
+            type: string
+            format: date-time
+        - name: nachname
+          in: query
+          description: 'Nur Fahrlehrer, deren **Nachname** `nachname` enthält, werden zurückgegeben.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        fahrlehrerid:
+                          type: integer
+                          description: '**RowID des Fahrlehrers**.'
+                      required:
+                        - fahrlehrerid
+                    - $ref: '#/components/schemas/fahrlehrer'
+                    - $ref: '#/components/schemas/user'
+  /fahrschulen:
+    get:
+      tags:
+        - Anwender
+      summary: Gibt Fahrschulen zurück.
+      description: >-
+        Alle **Fahrschulen** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: bezeichnung
+          in: query
+          description: 'Nur Fahrschulen, deren **Bezeichnung** `bezeichnung` enthalten, werden zurückgegeben.'
+          schema:
+            type: string
+        - name: fahrzeugklasse
+          in: query
+          description: 'Nur Fahrschulen, welche die **Fahrzeugklasse** `fahrzeugklasse` anbieten, werden zurückgegeben.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        fahrschuleid:
+                          type: integer
+                          description: '**RowID der Fahrschule**.'
+                        adresseid:
+                          type: integer
+                          description: '**RowID der Adresse**.'
+                      required:
+                        - fahrschuleid
+                        - adresseid
+                    - $ref: '#/components/schemas/fahrschule'
+    post:
+      tags:
+        - Authentifizierter und als Administrator authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Fügt eine Fahrschule hinzu.
+      description: >-
+        Eine **Fahrschule** wird mit den entsprechenden Werten hinzugefügt und dem authentifizierten Administrator zugeordnet.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/fahrschule'
+                - type: object
+                  properties:
+                    adresseid:
+                      type: integer
+                      description: '**RowID** der Adresse.'
+                  required:
+                    - adresseid
+                    - fahrzeugklasse
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+  /fahrzeuge:
+    post:
+      tags:
+        - Authentifizierter und als Administrator authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Fügt ein Fahrzeug hinzu.
+      description: >-
+        Ein **Fahrzeug** wird mit den entsprechenden Werten hinzugefügt und der angegebenen (durch den Administrator betreuten) Fahrschule zugeordnet.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    fahrschuleid:
+                      type: integer
+                      description: '**RowID** der Fahrschule.'
+                    fahrzeugklasse:
+                      type: integer
+                      description: '**RowID** der Fahrzeugklasse.'
+                  required:
+                    - fahrschuleid
+                    - fahrzeugklasse
+                - $ref: '#/components/schemas/fahrzeug'
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+    get:
+      tags:
+        - Anwender
+      summary: Gibt Fahrzeuge zurück.
+      description: >-
+        Alle **Fahrzeuge** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: kennzeichen
+          in: query
+          description: 'Nur Fahrzeuge, deren **Kennzeichen** `kennzeichen` enthält, werden zurückgegeben.'
+          schema:
+            type: string
+        - name: erstzulassungsdatum
+          in: query
+          description: 'Nur Fahrzeuge, deren **Erstzulassungsdatum** >=  `erstzulassungsdatum` ist, werden zurückgegeben.'
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        fahrzeugid:
+                          type: integer
+                          description: '**RowID des Fahrzeugs**.'
+                        fahrschuleid:
+                          type: integer
+                          description: '**RowID der Fahrschule**.'
+                      required:
+                        - fahrzeugid
+                    - $ref: '#/components/schemas/fahrzeug'
+  /adressen:
+    get:
+      tags:
+        - Anwender
+      summary: Gibt Adressen zurück.
+      description: >-
+        Alle **Adressen** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: hausnummer
+          in: query
+          description: 'Nur Adressen, deren **Hausnummer** `hausnummer` enthält, werden zurückgegeben.'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        adresseid:
+                          type: integer
+                          description: '**RowID der Adresse**.'
+                      required:
+                        - adresseid
+                    - $ref: '#/components/schemas/adresse'
+
+  /fahrstunden:
+    post:
+      tags:
+        - Authentifizierter und als Fahrlehrer authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Fügt eine (eigene) Fahrstunde hinzu.
+      description: >-
+        Eine **Fahrstunde** wird mit den entsprechenden Werten hinzugefügt.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    fahrschuelerid:
+                      type: integer
+                      description: '**RowID** des Fahrschülers.'
+                    fahrzeugid:
+                      type: integer
+                      description: '**RowID** der Fahrzeugs.'
+                  required:
+                    - fahrschuelerid
+                    - fahrzeugid
+                - $ref: '#/components/schemas/fahrstunde'
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+    get:
+      tags:
+        - Authentifizierter und als Fahrlehrer authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Gibt (eigene) Fahrstunden zurück.
+      description: >-
+        Alle (eigenen) **Fahrstunden** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: dauer
+          in: query
+          description: 'Nur Fahrstunden, deren **Dauer** >= `dauer` ist, werden zurückgegeben.'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        fahrzeugid:
+                          type: integer
+                          description: '**RowID des Fahrzeugs**.'
+                        fahrschuleid:
+                          type: integer
+                          description: '**RowID der Fahrschule**.'
+                        fahrschuelerid:
+                          type: integer
+                          description: '**RowID der Fahrschülers**.'
+                      required:
+                        - fahrzeugid
+                        - fahrschuleid
+                        - fahrschuelerid
+                    - $ref: '#/components/schemas/fahrstunde'
+  /theorieuebungen:
+    post:
+      tags:
+        - Authentifizierter und als Administrator authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Fügt eine Theorieübung hinzu.
+      description: >-
+        Eine **Theorieübung** wird mit den entsprechenden Werten hinzugefügt und einer (durch den Administrator betreuten) Fahrschule zugeordnet.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    fahrschuleid:
+                      type: integer
+                      description: '**RowID** der Fahrschule.'
+                    themabezeichnung:
+                      type: string
+                      description: '**Bezeichnung** des Themas.'
+                    dauer:
+                      type: integer
+                      description: '**Dauer** der Theorieübung.'
+                    verpflichtend:
+                      type: boolean
+                      description: '**Themenpflicht** des Themas.'
+                  required:
+                    - fahrschuleid
+                    - themabezeichnung
+                    - dauer
+                    - verpflichtend
+                - $ref: '#/components/schemas/theorieuebung'
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+    get:
+      tags:
+        - Anwender
+      summary: Gibt Theorieübungen zurück.
+      description: >-
+        Alle **Theorieübungen** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: fahrschuleid
+          in: query
+          description: 'Nur Theorieübungen, die von der **Fahrschule** mit RowID `fahrschuleid` veranstaltet werden, werden zurückgegeben.'
+          schema:
+            type: integer
+        - name: themabezeichnung
+          in: query
+          description: 'Nur Theorieübungen, die dieses **Thema** behandeln, werden zurückgegeben.'
+          schema:
+            type: string
+        - name: dauer
+          in: query
+          description: 'Nur die Theorieübungen, die eine **Dauer** >= `dauer` haben, werden zurückgegeben.'
+          schema:
+            type: integer
+        - name: verpflichtend
+          in: query
+          description: 'Nur die Theorieübungen, deren Themenpflicht `verpflichtend` entspricht, werden zurückgegeben.'
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        theorieuebungid:
+                          type: integer
+                          description: '**RowID der Theorieübung**.'
+                        fahrschuleid:
+                          type: integer
+                          description: '**RowID der Fahrschule**.'
+                        themabezeichnung:
+                          type: string
+                          description: '**Bezeichnung des Themas**.'
+                        verpflichtend: 
+                          type: boolean
+                          description: 'Themenpflicht des Themas.'
+                      required:
+                        - fahrschuleid
+                        - themabezeichnung
+                        - verpflichtend
+                        - theorieuebungid
+                    - $ref: '#/components/schemas/theorieuebung'
+                    
+  /theorieuebungen/{theorieuebungid}/fahrschueler:
+    post:
+      tags:
+        - Authentifizierter und als Fahrschüler authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Fügt einen Fahrschüler (als Teilnehmer) zu einer Theorieübung hinzu.
+      description: >-
+        Der authentifizierte Fahrschüler wird einer **Theorieübung** hinzugefügt.
+      parameters:
+        - name: theorieuebungid
+          in: path
+          description: '**RowID** der Theorieübung.'
+          schema:
+            type: integer
+          required: true
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+          
+  /pruefungen:
+    post:
+      tags:
+        - Authentifizierter und als Administrator authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Fügt eine Prüfung hinzu.
+      description: >-
+        Eine **Prüfung** wird mit den entsprechenden Werten hinzugefügt.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - type: object
+                  properties:
+                    fahrschuelerid:
+                      type: integer
+                      description: '**RowID** des Fahrschülers.'
+                  required:
+                    - fahrschuelerid
+                - $ref: '#/components/schemas/pruefung'
+      responses:
+        '201':
+          $ref: '#/components/responses/201'
+        '400':
+          $ref: '#/components/responses/400'
+        '401':
+          $ref: '#/components/responses/401'
+        '403':
+          $ref: '#/components/responses/403'
+
+    get:
+      tags:
+        - Authentifizierter und als Administrator authorisierter Anwender
+      security:
+        - basicAuth: []
+      summary: Gibt Prüfungen zurück.
+      description: >-
+        Alle **Prüfungen** werden zurückgegeben. Falls Query-Parameter mit Werten
+        angegeben wurden, wird die Rückgabe noch entsprechend gefiltert.
+      parameters:
+        - name: fahrschuelerid
+          in: query
+          description: 'Nur Prüfungen, die von dem **Fahrschüler** mit RowID `fahrschuelerid` absolviert wurden, werden zurückgegeben.'
+          schema:
+            type: integer
+        - name: gebuehr
+          in: query
+          description: 'Nur Prüfungen, die eine **Gebühr** von mindestens `gebuehr` besitzen, werden zurückgegeben.'
+          schema:
+            type: number
+            format: double
+        - name: typ
+          in: query
+          description: 'Nur die Prüfungen, deren **Typ** `typ` entspricht, werden zurückgegeben.'
+          schema:
+            type: boolean
+        - name: ergebnis
+          in: query
+          description: 'Nur die Prüfungen, dessen **Ergebnis** `ergebnis` entspricht, werden zurückgegeben.'
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: '**OK**.'
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - type: object
+                      properties:
+                        fahrschulerid:
+                          type: integer
+                          description: '**RowID des Fahrschülers**.'
+                      required:
+                        - fahrzeugid
+                    - $ref: '#/components/schemas/pruefung'
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+  responses:
+    '201':
+      description: '**Created**.'
+      headers:
+        Location:
+          description: Die URL der neuen Ressource.
+          schema:
+            type: string
+    '204':
+      description: '**No Content**.'
+    '301':
+      description: '**Moved Permanently**.'
+      headers:
+        Location:
+          description: Die URL der Ressource.
+          schema:
+            type: string
+    '400':
+      description: '**Bad Request**.'
+    '401':
+      description: '**Unauthorized**.'
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+    '403':
+      description: '**Forbidden**.'
+    '404':
+      description: '**Not Found**.'
+  schemas:
+    user:
+      type: object
+      properties:
+        email:
+          type: string
+          description: '**E-Mail-Adresse** des Users.'
+        passwort:
+          type: string
+          description: '**Passwort** des Users.'
+        vorname:
+          type: string
+          description: '**Vorname** des Users.'
+        nachname:
+          type: string
+          description: '**Nachname** des Users.'
+      required:
+        - email
+        - vorname
+        - nachname
+        - passwort
+    admin:
+      type: object
+      properties:
+        telefonnummer:
+          type: string
+          description: '**Telefonnumer** des Admins.'
+      required:
+        - telefonnummer
+    fahrlehrer:
+      type: object
+      properties:
+        lizenzdatum:
+          type: string
+          description: '**Lizenzdatum** des Fahrlehrers.'
+      required:
+        - lizenzdatum
+    fahrschueler:
+      type: object
+      properties:
+        geschlecht:
+          type: string
+          description: '**Geschlecht** des Fahrschülers.'
+      required:
+        - geschlecht
+    fahrschule:
+      type: object
+      properties:
+        email:
+          type: string
+          description: '**E-Mail-Adresse** der Fahrschule.'
+        website:
+          type: string
+          description: '**Website** der Fahrschule.'
+        bezeichnung:
+          type: string
+          description: '**Bezeichnung** der Fahrschule.'
+      required:
+        - email
+        - website
+        - bezeichnung
+    fahrstunde:
+      type: object
+      properties:
+        preis:
+          type: number
+          format: double
+          description: '**Preis** der Fahrstunde.'
+        dauer:
+          type: integer
+          description: '**Dauer** der Fahrstunde.'
+        typ:
+          type: string
+          description: '**Typ** der Fahrstunde.'
+      required:
+        - preis
+        - dauer
+        - typ
+    theorieuebung:
+      type: object
+      properties:
+        dauer:
+          type: integer
+          description: '**Dauer** der Theorieübung.'
+      required:
+        - dauer
+    pruefung:
+      type: object
+      properties:
+        gebuehr:
+          type: number
+          format: double
+          description: '**Gebühr** der Prüfung.'
+        typ:
+          type: boolean
+          description: '**Typ** der Prüfung: 0 = Thereotisch / 1 = Praktisch'
+        ergebnis:
+          type: boolean
+          description: '**Ergebnis** der Prüfung: 0 = Nicht bestanden / 1 = Bestanden'
+      required:
+        - gebuehr
+        - typ
+        - ergebnis
+    fahrzeug:
+      type: object
+      properties:
+        kennzeichen:
+          type: string
+          description: '**Kennzeichen** des Fahrzeugs.'
+        hudatum:
+          type: string
+          format: date
+          description: '**HU-Datum** des Fahrzeugs im Format "YYYY-MM-DD".'
+        erstzulassung:
+          type: string
+          format: date
+          description: '**Erstzulassungsdatum** des Fahrzeugs im Format "YYYY-MM-DD".'
+      required:
+        - kennzeichen
+        - hudatum
+        - erstzulassung
+    fahrzeugklasse:
+      type: object
+      properties:
+        bezeichnung:
+          type: string
+          description: '**Bezeichnung** der Fahrzeugklasse.'
+      required:
+        - bezeichnung
+    fuehrerschein:
+      type: object
+      properties:
+        ausstellungsdatum:
+          type: string
+          format: date
+          description: '**Ausstellungsdatum** des Führerscheins im Format "YYYY-MM-DD".'
+        ablaufdatum:
+          type: string
+          format: date
+          description: '**Ablaufdatum** des Führerscheins im Format "YYYY-MM-DD".'
+      required:
+        - ausstellungsdatum
+        - ablaufdatum
+    adresse:
+      type: object
+      properties:
+        plz:
+          type: string
+          description: '**PLZ** der Adresse.'
+        stadt:
+          type: string
+          description: '**Stadt** der Adresse.'
+        strasse:
+          type: string
+          description: '**Straße** der Adresse.'
+        hausnummer:
+          type: string
+          description: '**Hausnummer** der Adresse.'
+      required:
+        - plz
+        - stadt
+        - strasse
+        - hausnummer

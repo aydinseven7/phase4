@@ -33,14 +33,14 @@ public class UserService {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
 
-            Connection connection;
+            Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement;
 
             //Fahrschueler speichern
 
             String sql2 = "INSERT INTO Schueler (Email, Geschlecht, Adresse) VALUES (?, ?, ?)";
 
-            connection = dataSource.getConnection();
+
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, email);
             preparedStatement.setString(2, geschlecht);
@@ -186,15 +186,15 @@ public class UserService {
 
     public Response getFahrlehrer(String lizenzdatum, String nachname) throws SQLException {
 
-        String sql = "SELECT Fahrlehrer.RowId, Fahrlehrer.Fahrlehrerlizenz, Nutzer.Email, Nutzer.Passwort, Nutzer.Vorname, Nutzer.Nachname FROM Fahrlehrer,Nutzer WHERE Fahrlehrer.Email = Nutzer.Email AND ((strftime('%Y-%m-%d', Fahrlehrer.Fahrlehrerlizenz) - strftime('%Y-%m-%d', ?)) >= 0 OR ? IS NULL) AND (lower(Nutzer.Nachname) = lower(?) OR ? IS NULL)";
+        String sql = "SELECT Fahrlehrer.RowId, Fahrlehrer.Fahrlehrerlizenz, Nutzer.Email, Nutzer.Passwort, Nutzer.Vorname, Nutzer.Nachname FROM Fahrlehrer,Nutzer WHERE Fahrlehrer.Email = Nutzer.Email AND ((strftime('%Y-%m-%d', Fahrlehrer.Fahrlehrerlizenz) - strftime('%Y-%m-%d', ?)) <= 0 OR ? IS NULL) AND (lower(Nutzer.Nachname) = lower(?) OR ? IS NULL)";
 
         Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement = connection.prepareStatement(sql);
-        preparedStatement.setString(1, lizenzdatum);
-        preparedStatement.setString(2, lizenzdatum);
-        preparedStatement.setString(3, nachname);
-        preparedStatement.setString(4, nachname);
-        ResultSet resultSet = preparedStatement.executeQuery();
+        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+        preparedStatement2.setString(1, lizenzdatum);
+        preparedStatement2.setString(2, lizenzdatum);
+        preparedStatement2.setString(3, nachname);
+        preparedStatement2.setString(4, nachname);
+        ResultSet resultSet = preparedStatement2.executeQuery();
         ResultSetMetaData metaData = resultSet.getMetaData();
         
         String[] strings = null;
@@ -221,7 +221,7 @@ public class UserService {
 
             fahrlehrer.add(tempFahrlehrer);
         });
-        preparedStatement.closeOnCompletion();
+        preparedStatement2.closeOnCompletion();
 
         return Response.status(Response.Status.OK).entity(fahrlehrer).build();
     }

@@ -22,7 +22,7 @@ INSERT INTO "Fahrzeugklasse"("Bezeichnung")
 VALUES('AM'),
         ('B');
 
-INSERT INTO "Schüler"("Email","Geschlecht","Adresse")
+INSERT INTO "Schueler"("Email","Geschlecht","Adresse")
 VALUES('test@gmail.com','m',1),
 ('vier2@hhu.de','m',1),
 ('vier1@hhu.de','m',1),

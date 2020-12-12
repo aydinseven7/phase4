@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS "Fahrschule" (
 	FOREIGN KEY("Admin") REFERENCES "Admin"("Email") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "Schüler" (
+CREATE TABLE IF NOT EXISTS "Schueler" (
 	"Email"	varchar(30) NOT NULL UNIQUE,
 	"Geschlecht"	varchar(1) CHECK("Geschlecht" LIKE "m" OR "Geschlecht" LIKE "w" OR "Geschlecht" LIKE "d"),
 	"Adresse"	INTEGER NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS "Führerschein" (
 	"Gültigkeitsdatum"	varchar(20) NOT NULL CHECK(trim("Gültigskeitsdatum") NOT LIKE '' AND "Gültigkeitsdatum" IS date("Gültigkeitsdatum")),
 	"id"	INTEGER UNIQUE,
 	PRIMARY KEY("id"),
-	FOREIGN KEY("Schüler") REFERENCES "Schüler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
+	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "Fahrlehrer" (
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS "Fahrstunde" (
 	PRIMARY KEY("id" AUTOINCREMENT),
 	FOREIGN KEY("Fahrschule") REFERENCES "Fahrschule"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY("Fahrlehrer") REFERENCES "Fahrlehrer"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
-	FOREIGN KEY("Schüler") REFERENCES "Schüler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
+	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "Fahrzeug" (
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS "Schüler_Belegt_Prüfung" (
 	"Prüfung"	INTEGER NOT NULL,
 	"Erfolgreich"	INTEGER NOT NULL CHECK("Erfolgreich" = 1 OR "Erfolgreich" = 0),
 	"id"	INTEGER UNIQUE,
-	FOREIGN KEY("Schüler") REFERENCES "Schüler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY("Prüfung") REFERENCES "Prüfung"("id") ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS "Schüler_Belegt_Theoretische_Übung" (
 	"theoretische_Übung"	INTEGER NOT NULL,
 	"id"	INTEGER UNIQUE,
 	FOREIGN KEY("theoretische_Übung") REFERENCES "theoretische_Übung"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-	FOREIGN KEY("Schüler") REFERENCES "Schüler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
@@ -222,7 +222,7 @@ BEFORE INSERT ON Öffnungszeiten FOR EACH ROW
 BEGIN
 SELECT RAISE(ABORT, 'Die Öffnungszeit liegt nach der Schließung!') WHERE EXISTS (SELECT id
 	FROM Öffnungszeiten
-	WHERE Anfang > Ende);
+	WHERE (time(Anfang) - time(Ende)>0));
 END;
 
 DROP TRIGGER IF EXISTS "roundingLesson";

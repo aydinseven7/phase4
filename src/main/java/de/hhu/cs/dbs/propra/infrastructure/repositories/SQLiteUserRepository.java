@@ -22,7 +22,9 @@ public class SQLiteUserRepository implements UserRepository {
     public Optional<User> findByName(String name) {
         Optional<User> user = Optional.empty();
         try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT ?, 'USER';"; // TODO: Dem Benutzer 'name' die entsprechenden Berechtigungen geben (siehe enum Role), um diese per RolesAllowed-Annotation zu nutzen. Ein Ergebnistupel besteht aus E-Mail-Adresse bzw. Benutzernamen und Berechtigung.
+            String sql = "SELECT Email, 'ADMIN' FROM Admin WHERE Email = ? UNION "
+                    + "SELECT Email, 'FAHRLEHRER' FROM Fahrlehrer WHERE Email = ? UNION "
+                    + "SELECT Email, 'SCHUELER' FROM Schüler WHERE Email = ?";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
             preparedStatement.closeOnCompletion();
             preparedStatement.setObject(1, name);
@@ -36,7 +38,7 @@ public class SQLiteUserRepository implements UserRepository {
 
     public long countByNameAndPassword(String name, String password) {
         try (Connection connection = dataSource.getConnection()) {
-            String sql = "SELECT count(*) FROM (SELECT ?, ?);"; // TODO: Die Anzahl der Benutzer mit 'name' als E-Mail-Adresse bzw. Benutzernamen und 'password' als Passwort zurueckgeben.
+            String sql = "SELECT count(*) FROM (SELECT * FROM Nutzer WHERE Email = ? AND Passwort = ?);";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
             preparedStatement.closeOnCompletion();
             preparedStatement.setObject(1, name);

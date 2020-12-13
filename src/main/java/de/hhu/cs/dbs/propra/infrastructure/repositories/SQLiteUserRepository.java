@@ -24,10 +24,12 @@ public class SQLiteUserRepository implements UserRepository {
         try (Connection connection = dataSource.getConnection()) {
             String sql = "SELECT Email, 'ADMIN' FROM Admin WHERE Email = ? UNION "
                     + "SELECT Email, 'FAHRLEHRER' FROM Fahrlehrer WHERE Email = ? UNION "
-                    + "SELECT Email, 'SCHUELER' FROM Schüler WHERE Email = ?";
+                    + "SELECT Email, 'SCHUELER' FROM Schueler WHERE Email = ?";
             PreparedStatement preparedStatement = connection.prepareStatement(sql);
             preparedStatement.closeOnCompletion();
             preparedStatement.setObject(1, name);
+            preparedStatement.setObject(2, name);
+            preparedStatement.setObject(3, name);
             ResultSet resultSet = preparedStatement.executeQuery();
             user = Optional.ofNullable(extractUser(resultSet));
         } catch (SQLException e) {

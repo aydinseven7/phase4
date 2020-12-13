@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS "Nutzer" (
 	PRIMARY KEY("Email")
 );
 
-CREATE TABLE IF NOT EXISTS "Öffnungszeiten" (
+CREATE TABLE IF NOT EXISTS "Oeffnungszeiten" (
 	"id"	INTEGER UNIQUE,
 	"Tag"	INTEGER NOT NULL CHECK("Tag" BETWEEN 0 AND 6) UNIQUE,
 	"Anfang"	varchar(8) NOT NULL CHECK(trim("Anfang") NOT LIKE '' AND "Anfang" IS time("Anfang")),
@@ -54,10 +54,10 @@ CREATE TABLE IF NOT EXISTS "Fahrzeugklasse" (
 	PRIMARY KEY("Bezeichnung")
 );
 
-CREATE TABLE IF NOT EXISTS "Prüfung" (
+CREATE TABLE IF NOT EXISTS "Pruefung" (
 	"id"	INTEGER UNIQUE,
 	"Typ"	INTEGER NOT NULL CHECK("Typ" =0 OR "Typ" = 1),
-	"Teilnahmegebühr"	Float NOT NULL CHECK("Teilnahmegebühr" > 0 AND round("Teilnahmegebühr",2)),
+	"Teilnahmegebuehr"	Float NOT NULL CHECK("Teilnahmegebuehr" > 0 AND "Teilnahmegebuehr" = round("Teilnahmegebuehr", 2)),
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
@@ -86,13 +86,13 @@ CREATE TABLE IF NOT EXISTS "Schueler" (
 	FOREIGN KEY("Adresse") REFERENCES "Adresse"("id") ON DELETE cascade ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "Führerschein" (
-	"Schüler"	varchar(30) NOT NULL,
+CREATE TABLE IF NOT EXISTS "Fuehrerschein" (
+	"Schueler"	varchar(30) NOT NULL,
 	"Austellungsdatum"	varchar(20) NOT NULL CHECK(trim("Austellungsdatum") NOT LIKE '' AND "Austellungsdatum" IS date("Austellungsdatum")),
-	"Gültigkeitsdatum"	varchar(20) NOT NULL CHECK(trim("Gültigskeitsdatum") NOT LIKE '' AND "Gültigkeitsdatum" IS date("Gültigkeitsdatum")),
+	"Gueltigkeitsdatum"	varchar(20) NOT NULL CHECK(trim("Gueltigkeitsdatum") NOT LIKE '' AND "Gueltigkeitsdatum" IS date("Gueltigkeitsdatum")),
 	"id"	INTEGER UNIQUE,
 	PRIMARY KEY("id"),
-	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
+	FOREIGN KEY("Schueler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "Fahrlehrer" (
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS "Fahrlehrer" (
 	FOREIGN KEY("Email") REFERENCES "Nutzer"("Email")
 );
 
-CREATE TABLE IF NOT EXISTS "theoretische_Übung" (
+CREATE TABLE IF NOT EXISTS "theoretische_Uebung" (
 	"id"	INTEGER UNIQUE,
 	"Pflicht"	INTEGER NOT NULL CHECK("Pflicht" = 1 OR "Pflicht" = 0),
 	"Dauer"	INTEGER NOT NULL CHECK("Dauer" > 0),
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS "theoretische_Übung" (
 );
 
 CREATE TABLE IF NOT EXISTS "Fahrstunde" (
-	"Schüler"	INTEGER NOT NULL,
+	"Schueler"	INTEGER NOT NULL,
 	"Fahrlehrer"	INTEGER NOT NULL,
 	"Fahrschule"	INTEGER NOT NULL,
 	"Dauer"	INTEGER NOT NULL CHECK("Dauer" > 0 AND "Dauer" % 45 = 0),
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS "Fahrstunde" (
 	PRIMARY KEY("id" AUTOINCREMENT),
 	FOREIGN KEY("Fahrschule") REFERENCES "Fahrschule"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY("Fahrlehrer") REFERENCES "Fahrlehrer"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
-	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
+	FOREIGN KEY("Schueler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS "Fahrzeug" (
@@ -137,11 +137,11 @@ CREATE TABLE IF NOT EXISTS "Fahrzeug" (
 	FOREIGN KEY("Fahrzeugklasse") REFERENCES "Fahrzeugklasse"("Bezeichnung") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "Führerschein_Erlaubt_Fahrzeugklasse" (
-	"Führerschein"	INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS "Fuehrerschein_Erlaubt_Fahrzeugklasse" (
+	"Fuehrerschein"	INTEGER NOT NULL,
 	"Fahrzeugklasse"	varchar(30) NOT NULL,
 	"id"	INTEGER UNIQUE,
-	FOREIGN KEY("Führerschein") REFERENCES "Führerschein"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("Fuehrerschein") REFERENCES "Fuehrerschein"("id") ON DELETE CASCADE ON UPDATE CASCADE,
 	FOREIGN KEY("Fahrzeugklasse") REFERENCES "Fahrzeugklasse"("Bezeichnung") ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
@@ -155,44 +155,44 @@ CREATE TABLE IF NOT EXISTS "Fahrschule_besitzt_Adresse" (
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
-CREATE TABLE IF NOT EXISTS "Fahrschule_hat_Öffnungszeiten" (
+CREATE TABLE IF NOT EXISTS "Fahrschule_hat_Oeffnungszeiten" (
 	"Fahrschule"	varchar(30) NOT NULL,
-	"Öffnungszeiten"	INTEGER NOT NULL,
+	"Oeffnungszeiten"	INTEGER NOT NULL,
 	"id"	INTEGER UNIQUE,
-	FOREIGN KEY("Öffnungszeiten") REFERENCES "Öffnungszeiten"("id"),
+	FOREIGN KEY("Oeffnungszeiten") REFERENCES "Oeffnungszeiten"("id"),
 	FOREIGN KEY("Fahrschule") REFERENCES "Fahrschule"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
-CREATE TABLE IF NOT EXISTS "Schüler_Belegt_Prüfung" (
-	"Schüler"	INTEGER NOT NULL,
-	"Prüfung"	INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS "Schueler_Belegt_Pruefung" (
+	"Schueler"	INTEGER NOT NULL,
+	"Pruefung"	INTEGER NOT NULL,
 	"Erfolgreich"	INTEGER NOT NULL CHECK("Erfolgreich" = 1 OR "Erfolgreich" = 0),
 	"id"	INTEGER UNIQUE,
-	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
-	FOREIGN KEY("Prüfung") REFERENCES "Prüfung"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("Schueler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("Pruefung") REFERENCES "Pruefung"("id") ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
-CREATE TABLE IF NOT EXISTS "Schüler_Belegt_Theoretische_Übung" (
-	"Schüler"	varchar(30) NOT NULL,
-	"theoretische_Übung"	INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS "Schueler_Belegt_Theoretische_Uebung" (
+	"Schueler"	varchar(30) NOT NULL,
+	"theoretische_Uebung"	INTEGER NOT NULL,
 	"id"	INTEGER UNIQUE,
-	FOREIGN KEY("theoretische_Übung") REFERENCES "theoretische_Übung"("id") ON DELETE CASCADE ON UPDATE CASCADE,
-	FOREIGN KEY("Schüler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("theoretische_Uebung") REFERENCES "theoretische_Uebung"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+	FOREIGN KEY("Schueler") REFERENCES "Schueler"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
 	PRIMARY KEY("id" AUTOINCREMENT)
 );
 
 
 DROP TRIGGER IF EXISTS "checkFahrstunden";
-CREATE TRIGGER checkFahrstunden BEFORE INSERT ON Schüler_Belegt_Prüfung
+CREATE TRIGGER checkFahrstunden BEFORE INSERT ON Schueler_Belegt_Pruefung
 BEGIN
 SELECT RAISE(ABORT, "Der Schüler hat noch nicht genug Fahrstunden absolviert!")
-WHERE EXISTS (SELECT Typ FROM Prüfung
+WHERE EXISTS (SELECT Typ FROM Pruefung
 	WHERE Typ = 1 AND (SELECT sum(Fahrstunde.Dauer)
-        FROM Fahrstunde, Schüler_Belegt_Prüfung
-        WHERE Fahrstunde.Schüler = Schüler_Belegt_Prüfung.Schüler
-        	AND Prüfung.id=Schüler_Belegt_Prüfung.Prüfung)<180);
+        FROM Fahrstunde, Schueler_Belegt_Pruefung
+        WHERE Fahrstunde.Schueler = Schueler_Belegt_Pruefung.Schueler
+        	AND Pruefung.id=Schueler_Belegt_Pruefung.Pruefung)<180);
 END;
 /*Trigger checkTheorie funktioniert nicht, er löst immer aus 
 Theorie-Typ=0
@@ -218,10 +218,10 @@ END;*/
 
 DROP TRIGGER IF EXISTS "openingTimes";
 CREATE TRIGGER openingTimes
-BEFORE INSERT ON Öffnungszeiten FOR EACH ROW
+BEFORE INSERT ON Oeffnungszeiten FOR EACH ROW
 BEGIN
 SELECT RAISE(ABORT, 'Die Öffnungszeit liegt nach der Schließung!') WHERE EXISTS (SELECT id
-	FROM Öffnungszeiten
+	FROM Oeffnungszeiten
 	WHERE (time(Anfang) - time(Ende)>0));
 END;
 
@@ -232,9 +232,9 @@ BEGIN
 	UPDATE Fahrstunde SET 'Preis' = round(Preis, 2);
 END;
 
-DROP TRIGGER IF EXISTS "roundingExam";
+/*DROP TRIGGER IF EXISTS "roundingExam";
 CREATE TRIGGER roundingExam
-AFTER INSERT ON Prüfung FOR EACH ROW
+AFTER INSERT ON Pruefung FOR EACH ROW
 BEGIN
-	UPDATE Prüfung SET 'Teilnahmegebühr' = round(Teilnahmegebühr, 2);
-END;
+	UPDATE Pruefung SET 'Teilnahmegebühr' = round(Teilnahmegebühr, 2);
+END;*/

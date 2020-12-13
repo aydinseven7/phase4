@@ -76,12 +76,42 @@ public class UserController {
     }
     @Path("/fahrlehrer")
     @GET
-    public Response getFahrlehrer(@QueryParam("nachname") String nachname,
-                                  @QueryParam("lizenzdatum") String lizenzdatum) throws SQLException {
+    public Response getFahrlehrer(@QueryParam("lizenzdatum") String lizenzdatum,
+                                  @QueryParam("nachname") String nachname) throws SQLException {
 
         UserService userService = new UserService(dataSource);
 
-        return userService.getFahrlehrer(nachname, lizenzdatum);
+        return userService.getFahrlehrer(lizenzdatum, nachname);
     }
+
+    @Path("/fahrschule")
+    @GET
+    public Response getFahrschule(@QueryParam("bezeichnung") String bezeichnung,
+                                  @QueryParam("fahrzeugklasse") String klasse) throws SQLException {
+
+        UserService userService = new UserService(dataSource);
+
+        return userService.getFahrschule(bezeichnung, klasse);
+    }
+
+    @Path("/fahrzeuge")
+    @GET
+    public Response getFahrzeuge(@QueryParam("kennzeichen") String kennzeichen,
+                                  @QueryParam("erstzulassungsdatum") String erst) throws SQLException {
+
+        UserService userService = new UserService(dataSource);
+
+        return userService.getFahrzeuge(kennzeichen, erst);
+    }
+
+    @Path("/adressen")
+    @GET
+    public Response getAdressen(@QueryParam("hausnummer") String hausnummer) throws SQLException {
+
+        UserService userService = new UserService(dataSource);
+
+        return userService.getAdressen(hausnummer);
+    }
+
 }
 

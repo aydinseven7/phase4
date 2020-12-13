@@ -1,6 +1,7 @@
 package de.hhu.cs.dbs.propra.application.services;
 
 
+import de.hhu.cs.dbs.propra.domain.model.Adresse;
 import de.hhu.cs.dbs.propra.domain.model.Fahrlehrer;
 
 import javax.inject.Inject;
@@ -13,6 +14,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import de.hhu.cs.dbs.propra.domain.model.Fahrschule;
+import de.hhu.cs.dbs.propra.domain.model.Fahrzeug;
 import lombok.Data;
 
 
@@ -184,9 +188,11 @@ public class UserService {
         }
     }
 
+
+
     public Response getFahrlehrer(String lizenzdatum, String nachname) throws SQLException {
 
-        String sql = "SELECT Fahrlehrer.RowId, Fahrlehrer.Fahrlehrerlizenz, Nutzer.Email, Nutzer.Passwort, Nutzer.Vorname, Nutzer.Nachname FROM Fahrlehrer,Nutzer WHERE Fahrlehrer.Email = Nutzer.Email AND ((strftime('%Y-%m-%d', Fahrlehrer.Fahrlehrerlizenz) - strftime('%Y-%m-%d', ?)) <= 0 OR ? IS NULL) AND (lower(Nutzer.Nachname) = lower(?) OR ? IS NULL)";
+        String sql = "SELECT Fahrlehrer.RowId, Fahrlehrer.Fahrlehrerlizenz, Nutzer.Email, Nutzer.Passwort, Nutzer.Vorname, Nutzer.Nachname FROM Fahrlehrer,Nutzer WHERE Fahrlehrer.Email = Nutzer.Email AND (Fahrlehrer.Fahrlehrerlizenz >= ? OR ? IS NULL) AND (lower(Nutzer.Nachname) = lower(?) OR ? IS NULL)";
 
         Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
@@ -224,5 +230,136 @@ public class UserService {
         preparedStatement2.closeOnCompletion();
 
         return Response.status(Response.Status.OK).entity(fahrlehrer).build();
+    }
+
+    public Response getFahrschule(String bezeichnung, String klasse) throws SQLException {
+
+        String sql = "SELECT Fahrschule.RowId AS fahrschuleId, Adresse.RowId AS adresseId, Fahrschule.Email, Fahrschule.Bezeichnung, Fahrschule.Website \n" +
+                "FROM Fahrschule, Fahrschule_besitzt_Adresse, Adresse, Fahrzeug\n" +
+                "WHERE Fahrschule.Email = Fahrschule_besitzt_Adresse.Fahrschule \n" +
+                "AND Fahrschule_besitzt_Adresse.Adresse = Adresse.id \n" +
+                "AND Fahrzeug.Fahrschule = Fahrschule.Email OR Fahrschule.Email NOT IN Fahrzeug\n" +
+                "AND (lower(Fahrzeug.Fahrzeugklasse) = lower(?) OR ? IS NULL)\n" +
+                "AND (lower(Fahrschule.Bezeichnung) = lower(?) OR ? IS NULL);";
+
+        Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+        preparedStatement2.setString(1, klasse);
+        preparedStatement2.setString(2, klasse);
+        preparedStatement2.setString(3, bezeichnung);
+        preparedStatement2.setString(4, bezeichnung);
+        ResultSet resultSet = preparedStatement2.executeQuery();
+        ResultSetMetaData metaData = resultSet.getMetaData();
+
+        String[] strings = null;
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 1; i <= metaData.getColumnCount();i++) {
+            String name = metaData.getColumnName(i);
+            list.add(name);
+        }
+
+        strings = list.toArray(String[]::new);
+        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+        System.out.println(entities);
+
+        /*List<Fahrschule> fahrschule = new ArrayList<>();
+
+        entities.forEach(e -> {
+            Fahrschule tempFahrschule = new Fahrschule();
+
+            tempFahrschule.setFahrschulId(Integer.valueOf(e.get("rowid").toString()));
+            tempFahrschule.setAdressId(Integer.valueOf(e.get("rowid").toString()));
+            tempFahrschule.setEmail(e.get("Email").toString());
+            tempFahrschule.setBezeichnung(e.get("Bezeichnung").toString());
+            tempFahrschule.setWebsite(e.get("Website").toString());
+
+            fahrschule.add(tempFahrschule);
+        });*/
+        preparedStatement2.closeOnCompletion();
+
+        return Response.status(Response.Status.OK).build();
+    }
+
+
+    public Response getFahrzeuge(String kennzeichen, String erst) throws SQLException{
+        String sql = "SELECT Fahrzeug.RowId AS fahrzeugId, Fahrzeug.Kennzeichen, Fahrzeug.'HU-Eintrag', Fahrzeug.Erstzulassung, Fahrschule.ROWID AS fahrschuleId FROM Fahrzeug, Fahrschule WHERE Fahrzeug.Fahrschule = Fahrschule.Email AND (strftime('%Y-%m-%d', Fahrzeug.Erstzulassung) >= ? OR ? IS NULL) AND (instr(Fahrzeug.Kennzeichen, ?) > 0 OR ? IS NULL)";
+
+
+        Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+        preparedStatement2.setString(1, erst);
+        preparedStatement2.setString(2, erst);
+        preparedStatement2.setString(3, kennzeichen);
+        preparedStatement2.setString(4, kennzeichen);
+        ResultSet resultSet = preparedStatement2.executeQuery();
+        ResultSetMetaData metaData = resultSet.getMetaData();
+
+        String[] strings = null;
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 1; i <= metaData.getColumnCount();i++) {
+            String name = metaData.getColumnName(i);
+            list.add(name);
+        }
+
+        strings = list.toArray(String[]::new);
+        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+        System.out.println(entities);
+
+        List<Fahrzeug> fahrzeuge = new ArrayList<>();
+
+        entities.forEach(e -> {
+            Fahrzeug tempFahrzeug = new Fahrzeug();
+
+            tempFahrzeug.setFahrschuleid(Integer.valueOf(e.get("fahrschuleId").toString()));
+            tempFahrzeug.setFahrzeugid(Integer.valueOf(e.get("fahrzeugId").toString()));
+            tempFahrzeug.setKennzeichen(e.get("Kennzeichen").toString());
+            tempFahrzeug.setHudatum(e.get("HU-Eintrag").toString());
+            tempFahrzeug.setErstzulassung(e.get("Erstzulassung").toString());
+
+            fahrzeuge.add(tempFahrzeug);
+        });
+        preparedStatement2.closeOnCompletion();
+
+        return Response.status(Response.Status.OK).entity(fahrzeuge).build();
+    }
+
+    public Response getAdressen(String hausnummer) throws SQLException{
+        String sql = "SELECT *, Adresse.ROWID FROM Adresse WHERE Adresse.Hausnummer = ? OR ? IS NULL";
+
+
+        Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+        preparedStatement2.setString(1, hausnummer);
+        preparedStatement2.setString(2, hausnummer);
+        ResultSet resultSet = preparedStatement2.executeQuery();
+        ResultSetMetaData metaData = resultSet.getMetaData();
+
+        String[] strings = null;
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 1; i <= metaData.getColumnCount();i++) {
+            String name = metaData.getColumnName(i);
+            list.add(name);
+        }
+
+        strings = list.toArray(String[]::new);
+        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+        System.out.println(entities);
+
+        List<Adresse> adressen = new ArrayList<>();
+
+        entities.forEach(e -> {
+            Adresse tempAdresse = new Adresse();
+
+            tempAdresse.setAdresseid(Integer.valueOf(e.get("id").toString()));
+            tempAdresse.setStadt(e.get("Stadt").toString());
+            tempAdresse.setStrasse(e.get("Strasse").toString());
+            tempAdresse.setPlz(e.get("PLZ").toString());
+            tempAdresse.setHausnummer(e.get("Hausnummer").toString());
+
+            adressen.add(tempAdresse);
+        });
+        preparedStatement2.closeOnCompletion();
+
+        return Response.status(Response.Status.OK).entity(adressen).build();
     }
 }

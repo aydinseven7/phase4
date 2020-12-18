@@ -50,21 +50,20 @@ public class AdminService{
             preparedStatement.setString(2, addressId);
 
             preparedStatement.executeUpdate();
-            //preparedStatement.closeOnCompletion();
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "fahrschulen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
             e.printStackTrace();
             connection.rollback();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            return Response.status(Response.Status.BAD_REQUEST).entity("Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage()).build();
         }
         finally {
             connection.close();
         }
     }
 
-    public Response createFahrzeug(String fahrschuleid, String fahrzeugklasse, String kennzeichen, String hudatum, String erst, String admin) throws SQLException {
+    public Response createFahrzeug(String fahrschuleid, String fahrzeugklasse, String kennzeichen, String hudatum, String erst, String admin){
         try {
             String fahrschuleEmail;
             String klasse;
@@ -78,17 +77,21 @@ public class AdminService{
                 //Check if Admin at Fahrschule
                 sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.Email AND Fahrschule.Admin = ?";
                 if(getStringObjectMap(fahrschuleEmail, sql, admin)){
-                    return Response.status(Response.Status.NOT_FOUND).build();
+                    Map<String, Object> entity = new HashMap<>();
+                    entity.put("message", "Dieser Admin arbeitet nicht an dieser Fahrschule!");
+                    return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
                 }
 
                 //Check Fahrzeugklasse
                 sql = "SELECT Fahrzeugklasse.Bezeichnung FROM Fahrzeugklasse WHERE ? = Fahrzeugklasse.rowId";
                 Map<String, Object> e1 = getStringObjectMap(fahrzeugklasse, sql);
                 klasse = e1.get("Bezeichnung").toString();
-                System.out.println(klasse);
 
             }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                e.printStackTrace();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             Connection connection = dataSource.getConnection();
@@ -114,13 +117,15 @@ public class AdminService{
         }
         catch (SQLException e) {
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
 
 
 
-    public Response createUebung(String fahrschuleid, String themabezeichnung, String dauer, String verpflichtend, String admin) throws SQLException{
+    public Response createUebung(String fahrschuleid, String themabezeichnung, String dauer, String verpflichtend, String admin){
         try{
             String fahrschuleEmail;
 
@@ -133,11 +138,16 @@ public class AdminService{
                 //Check if Admin at Fahrschule
                 sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.Email AND Fahrschule.Admin = ?";
                 if(getStringObjectMap(fahrschuleEmail, sql, admin)){
-                    return Response.status(Response.Status.NOT_FOUND).build();
+                    Map<String, Object> entity = new HashMap<>();
+                    entity.put("message", "Dieser Admin arbeitet nicht an diesr Fahrschule!");
+                    return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
                 }
 
             }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                e.printStackTrace();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             Connection connection = dataSource.getConnection();
@@ -161,7 +171,9 @@ public class AdminService{
                     "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
 
@@ -176,10 +188,15 @@ public class AdminService{
                 Map<String, Object> e = getStringObjectMap(fahrschuelerid, sql);
                 fahrschueler = e.get("Email").toString();
                 if(e.isEmpty()){
-                    return Response.status(Response.Status.BAD_REQUEST).entity("Diese id existiert nicht").build();
+                    Map<String, Object> entity = new HashMap<>();
+                    entity.put("message", "Diese ID existiert nicht!");
+                    return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
                 }
             }catch(SQLException e){
-                return Response.status(Response.Status.BAD_REQUEST).build();
+                e.printStackTrace();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             connection.setAutoCommit(false);
@@ -194,7 +211,6 @@ public class AdminService{
 
             preparedStatement.executeUpdate();
             Long id = preparedStatement.getGeneratedKeys().getLong(1);
-            //preparedStatement.closeOnCompletion();
 
             //Pruefungsteilnahme speichern
             String sql2 = "INSERT INTO Schueler_Belegt_Pruefung (Schueler, Pruefung, Erfolgreich) VALUES (?, ?, ?)";
@@ -206,71 +222,79 @@ public class AdminService{
             preparedStatement.setString(3, ergebnis);
 
             preparedStatement.executeUpdate();
-            //preparedStatement.closeOnCompletion();
             connection.commit();
 
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
-            e.printStackTrace();
             connection.rollback();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
         finally {
             connection.close();
         }
     }
 
-    public Response getPruefung(Integer fahrschuelerid, Double gebuehr, Boolean typ, Boolean ergebnis) throws SQLException{
-        String sql = "SELECT Schueler_Belegt_Pruefung.Schueler, Schueler_Belegt_Pruefung.Erfolgreich, Pruefung.Teilnahmegebuehr, Pruefung.Typ, Schueler.ROWID AS schuelerID\n" +
-                "FROM Schueler_Belegt_Pruefung, Pruefung, Schueler\n" +
-                "WHERE Pruefung.id = Schueler_Belegt_Pruefung.Pruefung\n" +
-                "AND Schueler.Email = Schueler_Belegt_Pruefung.Schueler\n" +
-                "AND (Pruefung.Typ = ? OR ? IS NULL)\n" +
-                "AND (schuelerID = ? OR ? IS NULL)\n" +
-                "AND (Pruefung.Teilnahmegebuehr >= ? OR ? IS NULL)\n" +
-                "AND (Schueler_Belegt_Pruefung.Erfolgreich = ? OR ? IS NULL);";
+    public Response getPruefung(Integer fahrschuelerid, Double gebuehr, Boolean typ, Boolean ergebnis){
+        try {
+            String sql = "SELECT Schueler_Belegt_Pruefung.Schueler, Schueler_Belegt_Pruefung.Erfolgreich, Pruefung.Teilnahmegebuehr, Pruefung.Typ, Schueler.ROWID AS schuelerID\n" +
+                    "FROM Schueler_Belegt_Pruefung, Pruefung, Schueler\n" +
+                    "WHERE Pruefung.id = Schueler_Belegt_Pruefung.Pruefung\n" +
+                    "AND Schueler.Email = Schueler_Belegt_Pruefung.Schueler\n" +
+                    "AND (Pruefung.Typ = ? OR ? IS NULL)\n" +
+                    "AND (schuelerID = ? OR ? IS NULL)\n" +
+                    "AND (Pruefung.Teilnahmegebuehr >= ? OR ? IS NULL)\n" +
+                    "AND (Schueler_Belegt_Pruefung.Erfolgreich = ? OR ? IS NULL);";
 
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setObject(1, typ);
-        preparedStatement2.setObject(2, typ);
-        preparedStatement2.setObject(3, fahrschuelerid);
-        preparedStatement2.setObject(4, fahrschuelerid);
-        preparedStatement2.setObject(5, gebuehr);
-        preparedStatement2.setObject(6, gebuehr);
-        preparedStatement2.setObject(7, ergebnis);
-        preparedStatement2.setObject(8, ergebnis);
-        ResultSet resultSet = preparedStatement2.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+            preparedStatement2.setObject(1, typ);
+            preparedStatement2.setObject(2, typ);
+            preparedStatement2.setObject(3, fahrschuelerid);
+            preparedStatement2.setObject(4, fahrschuelerid);
+            preparedStatement2.setObject(5, gebuehr);
+            preparedStatement2.setObject(6, gebuehr);
+            preparedStatement2.setObject(7, ergebnis);
+            preparedStatement2.setObject(8, ergebnis);
+            ResultSet resultSet = preparedStatement2.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
 
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
+
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+            System.out.println(entities);
+
+            List<Pruefung> pruefung = new ArrayList<>();
+
+            entities.forEach(e -> {
+                Pruefung tempPruefung = new Pruefung();
+
+                tempPruefung.setFahrschuelerid(Integer.valueOf(e.get("schuelerID").toString()));
+                tempPruefung.setTyp(e.get("Typ").toString().equals("0"));
+                tempPruefung.setErgebnis(e.get("Erfolgreich").toString().equals("0"));
+                tempPruefung.setGebuehr(Double.valueOf(e.get("Teilnahmegebuehr").toString()));
+
+                pruefung.add(tempPruefung);
+            });
+            preparedStatement2.closeOnCompletion();
+
+            return Response.status(Response.Status.OK).entity(pruefung).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
-
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-        System.out.println(entities);
-
-        List<Pruefung> pruefung = new ArrayList<>();
-
-        entities.forEach(e -> {
-            Pruefung tempPruefung = new Pruefung();
-
-            tempPruefung.setFahrschuelerid(Integer.valueOf(e.get("schuelerID").toString()));
-            tempPruefung.setTyp(e.get("Typ").toString().equals("0"));
-            tempPruefung.setErgebnis(e.get("Erfolgreich").toString().equals("0"));
-            tempPruefung.setGebuehr(Double.valueOf(e.get("Teilnahmegebuehr").toString()));
-
-            pruefung.add(tempPruefung);
-        });
-        preparedStatement2.closeOnCompletion();
-
-        return Response.status(Response.Status.OK).entity(pruefung).build();
     }
 
     private boolean getStringObjectMap(String fahrschuleEmail, String sql, String admin) throws SQLException {

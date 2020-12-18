@@ -101,9 +101,7 @@ public class SchuelerService {
         }
     }
 
-    public Response addFahrschuelerToUebung(String uebungid, String fahrschueler) throws SQLException{
-        System.out.println(uebungid);
-        System.out.println(fahrschueler);
+    public Response addFahrschuelerToUebung(String uebungid, String fahrschueler){
         try{
             String uebung;
             try{
@@ -112,7 +110,10 @@ public class SchuelerService {
                 Map<String, Object> e = getStringObjectMap(uebungid, sql);
                 uebung = e.get("id").toString();
             }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                e.printStackTrace();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             Connection connection = dataSource.getConnection();
@@ -133,7 +134,9 @@ public class SchuelerService {
                     "theorieuebungen/" + uebungid + "/fahrschueler/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
 }

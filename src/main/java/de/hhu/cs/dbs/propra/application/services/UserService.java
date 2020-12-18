@@ -1,8 +1,7 @@
 package de.hhu.cs.dbs.propra.application.services;
 
 
-import de.hhu.cs.dbs.propra.domain.model.Adresse;
-import de.hhu.cs.dbs.propra.domain.model.Fahrlehrer;
+import de.hhu.cs.dbs.propra.domain.model.*;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
@@ -15,8 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import de.hhu.cs.dbs.propra.domain.model.Fahrschule;
-import de.hhu.cs.dbs.propra.domain.model.Fahrzeug;
 import lombok.Data;
 
 
@@ -34,7 +31,9 @@ public class UserService {
             addUser(email, password, vorname, nachname);
 
             if(checkAdressExists(addressId)){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die angegebene Adresse existiert nicht!");
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             Connection connection = dataSource.getConnection();
@@ -61,7 +60,9 @@ public class UserService {
         }
         catch (SQLException e) {
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
 
@@ -74,7 +75,7 @@ public class UserService {
             Connection connection;
             PreparedStatement preparedStatement;
 
-            //Fahrschueler speichern
+            //Admin speichern
 
             String sql2 = "INSERT INTO Admin (Email, Telefonnummer) VALUES (?, ?)";
 
@@ -94,7 +95,9 @@ public class UserService {
         }
         catch (SQLException e) {
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
     public Response createFahrlehrer(String email, String password, String vorname, String nachname, String lizenzdatum) throws SQLException {
@@ -106,8 +109,7 @@ public class UserService {
             Connection connection;
             PreparedStatement preparedStatement;
 
-            //Fahrschueler speichern
-
+            //Fahrlehrer speichern
             String sql2 = "INSERT INTO Fahrlehrer (Email, Fahrlehrerlizenz) VALUES (?, ?)";
 
             connection = dataSource.getConnection();
@@ -126,13 +128,14 @@ public class UserService {
         }
         catch (SQLException e) {
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
 
     private void addUser(String email, String password, String vorname, String nachname) throws SQLException {
         String sql = "INSERT INTO Nutzer (Email, Passwort, Vorname, Nachname) VALUES (?, ?, ? , ?)";
-
 
         Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
@@ -188,178 +191,254 @@ public class UserService {
         }
     }
 
-
-
     public Response getFahrlehrer(String lizenzdatum, String nachname) throws SQLException {
 
-        String sql = "SELECT Fahrlehrer.RowId, Fahrlehrer.Fahrlehrerlizenz, Nutzer.Email, Nutzer.Passwort, Nutzer.Vorname, Nutzer.Nachname FROM Fahrlehrer,Nutzer WHERE Fahrlehrer.Email = Nutzer.Email AND (Fahrlehrer.Fahrlehrerlizenz >= ? OR ? IS NULL) AND (lower(Nutzer.Nachname) = lower(?) OR ? IS NULL)";
+        try {
+            String sql = "SELECT Fahrlehrer.RowId, Fahrlehrer.Fahrlehrerlizenz, Nutzer.Email, Nutzer.Passwort, Nutzer.Vorname, Nutzer.Nachname FROM Fahrlehrer,Nutzer WHERE Fahrlehrer.Email = Nutzer.Email AND (Fahrlehrer.Fahrlehrerlizenz >= ? OR ? IS NULL) AND (lower(Nutzer.Nachname) = lower(?) OR ? IS NULL)";
 
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, lizenzdatum);
-        preparedStatement2.setString(2, lizenzdatum);
-        preparedStatement2.setString(3, nachname);
-        preparedStatement2.setString(4, nachname);
-        ResultSet resultSet = preparedStatement2.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
-        
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+            preparedStatement2.setString(1, lizenzdatum);
+            preparedStatement2.setString(2, lizenzdatum);
+            preparedStatement2.setString(3, nachname);
+            preparedStatement2.setString(4, nachname);
+            ResultSet resultSet = preparedStatement2.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
+
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
+
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+
+            List<Fahrlehrer> fahrlehrer = new ArrayList<>();
+
+            entities.forEach(e -> {
+                Fahrlehrer tempFahrlehrer = new Fahrlehrer();
+
+                tempFahrlehrer.setId(Integer.valueOf(e.get("rowid").toString()));
+                tempFahrlehrer.setEmail(e.get("Email").toString());
+                tempFahrlehrer.setLizenzdatum(e.get("Fahrlehrerlizenz").toString());
+                tempFahrlehrer.setPasswort(e.get("Passwort").toString());
+                tempFahrlehrer.setVorname(e.get("Vorname").toString());
+                tempFahrlehrer.setNachname(e.get("Nachname").toString());
+
+                fahrlehrer.add(tempFahrlehrer);
+            });
+            preparedStatement2.closeOnCompletion();
+
+            return Response.status(Response.Status.OK).entity(fahrlehrer).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
-        
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-
-        List<Fahrlehrer> fahrlehrer = new ArrayList<>();
-
-        entities.forEach(e -> {
-            Fahrlehrer tempFahrlehrer = new Fahrlehrer();
-
-            tempFahrlehrer.setId(Integer.valueOf(e.get("rowid").toString()));
-            tempFahrlehrer.setEmail(e.get("Email").toString());
-            tempFahrlehrer.setLizenzdatum(e.get("Fahrlehrerlizenz").toString());
-            tempFahrlehrer.setPasswort(e.get("Passwort").toString());
-            tempFahrlehrer.setVorname(e.get("Vorname").toString());
-            tempFahrlehrer.setNachname(e.get("Nachname").toString());
-
-            fahrlehrer.add(tempFahrlehrer);
-        });
-        preparedStatement2.closeOnCompletion();
-
-        return Response.status(Response.Status.OK).entity(fahrlehrer).build();
     }
 
     public Response getFahrschule(String bezeichnung, String klasse) throws SQLException {
+        try {
+            String sql = "SELECT DISTINCT Fahrschule.ROWID AS fahrschuleid, Adresse.ROWID AS adresseid, Fahrschule.Email, Fahrschule.Website, Fahrschule.Bezeichnung\n" +
+                    "FROM Fahrschule, Fahrschule_besitzt_Adresse, Adresse, Fahrzeug\n" +
+                    "WHERE Fahrschule.Email = Fahrschule_besitzt_Adresse.Fahrschule\n" +
+                    "AND Adresse.id = Fahrschule_besitzt_Adresse.Adresse\n" +
+                    "AND (lower(Fahrschule.Bezeichnung) = lower(?) OR ? IS NULL)\n" +
+                    "AND ((Fahrzeug.Fahrschule = Fahrschule.Email AND lower(Fahrzeug.Fahrzeugklasse) = lower(?)) OR ? IS NULL);";
 
-        String sql = "SELECT Fahrschule.RowId AS fahrschuleId, Adresse.RowId AS adresseId, Fahrschule.Email, Fahrschule.Bezeichnung, Fahrschule.Website \n" +
-                "FROM Fahrschule, Fahrschule_besitzt_Adresse, Adresse, Fahrzeug\n" +
-                "WHERE Fahrschule.Email = Fahrschule_besitzt_Adresse.Fahrschule \n" +
-                "AND Fahrschule_besitzt_Adresse.Adresse = Adresse.id \n" +
-                "AND Fahrzeug.Fahrschule = Fahrschule.Email OR Fahrschule.Email NOT IN Fahrzeug\n" +
-                "AND (lower(Fahrzeug.Fahrzeugklasse) = lower(?) OR ? IS NULL)\n" +
-                "AND (lower(Fahrschule.Bezeichnung) = lower(?) OR ? IS NULL);";
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+            preparedStatement2.setString(1, bezeichnung);
+            preparedStatement2.setString(2, bezeichnung);
+            preparedStatement2.setString(3, klasse);
+            preparedStatement2.setString(4, klasse);
+            ResultSet resultSet = preparedStatement2.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
+            preparedStatement2.closeOnCompletion();
 
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, klasse);
-        preparedStatement2.setString(2, klasse);
-        preparedStatement2.setString(3, bezeichnung);
-        preparedStatement2.setString(4, bezeichnung);
-        ResultSet resultSet = preparedStatement2.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
 
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
-        }
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
 
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-        System.out.println(entities);
-
-        /*List<Fahrschule> fahrschule = new ArrayList<>();
+        List<Fahrschule> fahrschule = new ArrayList<>();
 
         entities.forEach(e -> {
             Fahrschule tempFahrschule = new Fahrschule();
 
-            tempFahrschule.setFahrschulId(Integer.valueOf(e.get("rowid").toString()));
-            tempFahrschule.setAdressId(Integer.valueOf(e.get("rowid").toString()));
+            tempFahrschule.setFahrschuleid(Integer.valueOf(e.get("fahrschuleid").toString()));
+            tempFahrschule.setAdresseid(Integer.valueOf(e.get("adresseid").toString()));
             tempFahrschule.setEmail(e.get("Email").toString());
             tempFahrschule.setBezeichnung(e.get("Bezeichnung").toString());
             tempFahrschule.setWebsite(e.get("Website").toString());
 
             fahrschule.add(tempFahrschule);
-        });*/
-        preparedStatement2.closeOnCompletion();
-
-        return Response.status(Response.Status.OK).build();
+        });
+            return Response.status(Response.Status.OK).entity(fahrschule).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
+        }
     }
 
-
     public Response getFahrzeuge(String kennzeichen, String erst) throws SQLException{
-        String sql = "SELECT Fahrzeug.RowId AS fahrzeugId, Fahrzeug.Kennzeichen, Fahrzeug.'HU-Eintrag', Fahrzeug.Erstzulassung, Fahrschule.ROWID AS fahrschuleId FROM Fahrzeug, Fahrschule WHERE Fahrzeug.Fahrschule = Fahrschule.Email AND (strftime('%Y-%m-%d', Fahrzeug.Erstzulassung) >= ? OR ? IS NULL) AND (instr(Fahrzeug.Kennzeichen, ?) > 0 OR ? IS NULL)";
+        try {
+            String sql = "SELECT Fahrzeug.RowId AS fahrzeugId, Fahrzeug.Kennzeichen, Fahrzeug.'HU-Eintrag', Fahrzeug.Erstzulassung, Fahrschule.ROWID AS fahrschuleId FROM Fahrzeug, Fahrschule WHERE Fahrzeug.Fahrschule = Fahrschule.Email AND (strftime('%Y-%m-%d', Fahrzeug.Erstzulassung) >= ? OR ? IS NULL) AND (instr(Fahrzeug.Kennzeichen, ?) > 0 OR ? IS NULL)";
 
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+            preparedStatement2.setString(1, erst);
+            preparedStatement2.setString(2, erst);
+            preparedStatement2.setString(3, kennzeichen);
+            preparedStatement2.setString(4, kennzeichen);
+            ResultSet resultSet = preparedStatement2.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
 
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, erst);
-        preparedStatement2.setString(2, erst);
-        preparedStatement2.setString(3, kennzeichen);
-        preparedStatement2.setString(4, kennzeichen);
-        ResultSet resultSet = preparedStatement2.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
 
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+            System.out.println(entities);
+
+            List<Fahrzeug> fahrzeuge = new ArrayList<>();
+
+            entities.forEach(e -> {
+                Fahrzeug tempFahrzeug = new Fahrzeug();
+
+                tempFahrzeug.setFahrschuleid(Integer.valueOf(e.get("fahrschuleId").toString()));
+                tempFahrzeug.setFahrzeugid(Integer.valueOf(e.get("fahrzeugId").toString()));
+                tempFahrzeug.setKennzeichen(e.get("Kennzeichen").toString());
+                tempFahrzeug.setHudatum(e.get("HU-Eintrag").toString());
+                tempFahrzeug.setErstzulassung(e.get("Erstzulassung").toString());
+
+                fahrzeuge.add(tempFahrzeug);
+            });
+            preparedStatement2.closeOnCompletion();
+
+            return Response.status(Response.Status.OK).entity(fahrzeuge).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
-
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-        System.out.println(entities);
-
-        List<Fahrzeug> fahrzeuge = new ArrayList<>();
-
-        entities.forEach(e -> {
-            Fahrzeug tempFahrzeug = new Fahrzeug();
-
-            tempFahrzeug.setFahrschuleid(Integer.valueOf(e.get("fahrschuleId").toString()));
-            tempFahrzeug.setFahrzeugid(Integer.valueOf(e.get("fahrzeugId").toString()));
-            tempFahrzeug.setKennzeichen(e.get("Kennzeichen").toString());
-            tempFahrzeug.setHudatum(e.get("HU-Eintrag").toString());
-            tempFahrzeug.setErstzulassung(e.get("Erstzulassung").toString());
-
-            fahrzeuge.add(tempFahrzeug);
-        });
-        preparedStatement2.closeOnCompletion();
-
-        return Response.status(Response.Status.OK).entity(fahrzeuge).build();
     }
 
     public Response getAdressen(String hausnummer) throws SQLException{
-        String sql = "SELECT *, Adresse.ROWID FROM Adresse WHERE Adresse.Hausnummer = ? OR ? IS NULL";
+        try {
+            String sql = "SELECT *, Adresse.ROWID FROM Adresse WHERE Adresse.Hausnummer = ? OR ? IS NULL";
 
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+            preparedStatement2.setString(1, hausnummer);
+            preparedStatement2.setString(2, hausnummer);
+            ResultSet resultSet = preparedStatement2.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
 
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, hausnummer);
-        preparedStatement2.setString(2, hausnummer);
-        ResultSet resultSet = preparedStatement2.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
 
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+            System.out.println(entities);
+
+            List<Adresse> adressen = new ArrayList<>();
+
+            entities.forEach(e -> {
+                Adresse tempAdresse = new Adresse();
+
+                tempAdresse.setAdresseid(Integer.valueOf(e.get("id").toString()));
+                tempAdresse.setStadt(e.get("Stadt").toString());
+                tempAdresse.setStrasse(e.get("Strasse").toString());
+                tempAdresse.setPlz(e.get("PLZ").toString());
+                tempAdresse.setHausnummer(e.get("Hausnummer").toString());
+
+                adressen.add(tempAdresse);
+            });
+            preparedStatement2.closeOnCompletion();
+
+            return Response.status(Response.Status.OK).entity(adressen).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
+    }
 
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-        System.out.println(entities);
+    public Response getUebung(String themabezeichnung, Integer dauer, Boolean verpflichtend, Integer fahrschuleid) {
+        try {
+            String sql = "SELECT theoretische_Uebung.ROWID AS uebungID, Fahrschule.ROWID AS fahrschulid, theoretische_Uebung.Thema, theoretische_Uebung.Pflicht, theoretische_Uebung.Dauer\n" +
+                    "FROM Fahrschule, theoretische_Uebung\n" +
+                    "WHERE Fahrschule.Email = theoretische_Uebung.Fahrschule\n" +
+                    "AND (theoretische_Uebung.Dauer >= ? OR ? IS NULL)\n" +
+                    "AND (lower(theoretische_Uebung.Thema) = lower(?) OR ? IS NULL)\n" +
+                    "AND (theoretische_Uebung.Pflicht = ? OR ? IS NULL)" +
+                    "AND (Fahrschule.ROWID = ? OR ? IS NULL)\n";
 
-        List<Adresse> adressen = new ArrayList<>();
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+            preparedStatement2.setObject(1, dauer);
+            preparedStatement2.setObject(2, dauer);
+            preparedStatement2.setString(3, themabezeichnung);
+            preparedStatement2.setString(4, themabezeichnung);
+            preparedStatement2.setObject(5, verpflichtend?0:1);
+            preparedStatement2.setObject(6, verpflichtend?0:1);
+            preparedStatement2.setObject(7, fahrschuleid);
+            preparedStatement2.setObject(8, fahrschuleid);
+            ResultSet resultSet = preparedStatement2.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
 
-        entities.forEach(e -> {
-            Adresse tempAdresse = new Adresse();
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
 
-            tempAdresse.setAdresseid(Integer.valueOf(e.get("id").toString()));
-            tempAdresse.setStadt(e.get("Stadt").toString());
-            tempAdresse.setStrasse(e.get("Strasse").toString());
-            tempAdresse.setPlz(e.get("PLZ").toString());
-            tempAdresse.setHausnummer(e.get("Hausnummer").toString());
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
 
-            adressen.add(tempAdresse);
-        });
-        preparedStatement2.closeOnCompletion();
+            List<Uebung> uebungen = new ArrayList<>();
 
-        return Response.status(Response.Status.OK).entity(adressen).build();
+            entities.forEach(e -> {
+                Uebung tempUebung = new Uebung();
+
+                tempUebung.setTheorieuebungid(Integer.valueOf(e.get("uebungID").toString()));
+                tempUebung.setFahrschuleid(Integer.valueOf(e.get("fahrschulid").toString()));
+                tempUebung.setVerpflichtend(Boolean.valueOf(e.get("Pflicht").toString().equals("0")));
+                tempUebung.setDauer(Integer.valueOf(e.get("Dauer").toString()));
+                tempUebung.setThemabezeichnung(e.get("Thema").toString());
+
+                uebungen.add(tempUebung);
+            });
+            preparedStatement2.closeOnCompletion();
+
+            return Response.status(Response.Status.OK).entity(uebungen).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
+        }
     }
 }

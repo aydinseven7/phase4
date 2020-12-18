@@ -5,9 +5,9 @@ import lombok.Data;
 @Data
 public class Fahrschule {
 
-    private int fahrschulId;
+    private Integer fahrschuleid;
 
-    private int adressId;
+    private Integer adresseid;
 
     private String email;
 

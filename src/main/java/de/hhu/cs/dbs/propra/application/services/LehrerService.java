@@ -32,7 +32,10 @@ public class LehrerService{
                 Map<String, Object> e = getStringObjectMap(fahrschuelerid, sql);
                 fahrschueler = e.get("Email").toString();
             }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                e.printStackTrace();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die Fahrschueler-ID existiert nicht!");
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             String fahrschule;
@@ -42,7 +45,10 @@ public class LehrerService{
                 Map<String, Object> e = getStringObjectMap(fahrzeugid, sql);
                 fahrschule = e.get("Fahrschule").toString();
             }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                e.printStackTrace();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Die Fahrschul-ID existiert nicht!");
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
 
@@ -68,51 +74,59 @@ public class LehrerService{
                     "fahrstunden/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
             e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
     }
 
     public Response getFahrstunde(String dauer, String fahrlehrer) throws SQLException{
-        String sql = "SELECT Fahrschule.ROWID AS fahrschulid, Schueler.ROWID AS schuelerid, Fahrstunde.Dauer, Fahrstunde.Preis, Fahrstunde.Typ\n" +
-                "FROM Fahrschule, Fahrstunde, Schueler\n" +
-                "WHERE Fahrschule.Email=Fahrstunde.Fahrschule\n" +
-                "AND Schueler.Email=Fahrstunde.Schueler\n" +
-                "AND (Fahrstunde.Dauer >= ? OR ? IS NULL);";
+        try {
+            String sql = "SELECT Fahrschule.ROWID AS fahrschulid, Schueler.ROWID AS schuelerid, Fahrstunde.Dauer, Fahrstunde.Preis, Fahrstunde.Typ\n" +
+                    "FROM Fahrschule, Fahrstunde, Schueler\n" +
+                    "WHERE Fahrschule.Email=Fahrstunde.Fahrschule\n" +
+                    "AND Schueler.Email=Fahrstunde.Schueler\n" +
+                    "AND (Fahrstunde.Dauer >= ? OR ? IS NULL);";
 
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement = connection.prepareStatement(sql);
-        preparedStatement.setObject(1, dauer);
-        preparedStatement.setObject(2, dauer);
-        ResultSet resultSet = preparedStatement.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setObject(1, dauer);
+            preparedStatement.setObject(2, dauer);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            ResultSetMetaData metaData = resultSet.getMetaData();
 
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
+            String[] strings = null;
+            ArrayList<String> list = new ArrayList<>();
+            for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                String name = metaData.getColumnName(i);
+                list.add(name);
+            }
+
+            strings = list.toArray(String[]::new);
+            List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+
+            List<Fahrstunde> fahrstunde = new ArrayList<>();
+
+            entities.forEach(e -> {
+                Fahrstunde tempFahrstunde = new Fahrstunde();
+
+                tempFahrstunde.setFahrschuelerid(Integer.valueOf(e.get("schuelerid").toString()));
+                tempFahrstunde.setTyp(e.get("Typ").toString());
+                tempFahrstunde.setDauer(Integer.valueOf(e.get("Dauer").toString()));
+                tempFahrstunde.setPreis(Double.valueOf(e.get("Preis").toString()));
+                tempFahrstunde.setFahrschuleid(Integer.valueOf(e.get("fahrschulid").toString()));
+
+                fahrstunde.add(tempFahrstunde);
+            });
+            preparedStatement.closeOnCompletion();
+
+            return Response.status(Response.Status.OK).entity(fahrstunde).build();
+        } catch(SQLException e){
+            e.printStackTrace();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
-
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-        System.out.println(entities);
-
-        List<Fahrstunde> fahrstunde = new ArrayList<>();
-
-        entities.forEach(e -> {
-            Fahrstunde tempFahrstunde = new Fahrstunde();
-
-            tempFahrstunde.setFahrschuelerid(Integer.valueOf(e.get("schuelerid").toString()));
-            tempFahrstunde.setTyp(e.get("Typ").toString());
-            tempFahrstunde.setDauer(Integer.valueOf(e.get("Dauer").toString()));
-            tempFahrstunde.setPreis(Double.valueOf(e.get("Preis").toString()));
-            tempFahrstunde.setFahrschuleid(Integer.valueOf(e.get("fahrschulid").toString()));
-
-            fahrstunde.add(tempFahrstunde);
-        });
-        preparedStatement.closeOnCompletion();
-
-        return Response.status(Response.Status.OK).entity(fahrstunde).build();
     }
 
     private boolean getStringObjectMap(String fahrschuleEmail, String sql, String admin) throws SQLException {

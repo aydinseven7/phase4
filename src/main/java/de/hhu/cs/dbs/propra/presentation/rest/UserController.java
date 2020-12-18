@@ -84,7 +84,7 @@ public class UserController {
         return userService.getFahrlehrer(lizenzdatum, nachname);
     }
 
-    @Path("/fahrschule")
+    @Path("/fahrschulen")
     @GET
     public Response getFahrschule(@QueryParam("bezeichnung") String bezeichnung,
                                   @QueryParam("fahrzeugklasse") String klasse) throws SQLException {
@@ -111,6 +111,18 @@ public class UserController {
         UserService userService = new UserService(dataSource);
 
         return userService.getAdressen(hausnummer);
+    }
+
+    @Path("/theorieuebungen")
+    @GET
+    public Response getUebung(@QueryParam("themabezeichnung") String themabezeichnung,
+                              @QueryParam("dauer") Integer dauer,
+                              @QueryParam("verpflichtend") Boolean verpflichtend,
+                              @QueryParam("fahrschuleid") Integer fahrschuleid) throws SQLException {
+
+        UserService userService = new UserService(dataSource);
+
+        return userService.getUebung(themabezeichnung, dauer, verpflichtend, fahrschuleid);
     }
 
 }

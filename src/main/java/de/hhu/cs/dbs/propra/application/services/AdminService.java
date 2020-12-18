@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AdminService {
+public class AdminService{
     private DataSource dataSource;
 
     public AdminService(DataSource dataSource) {
@@ -20,12 +20,13 @@ public class AdminService {
     }
 
     public Response createFahrschule(String email, String website, String bezeichnung, String addressId, String adminEmail) throws SQLException {
+        Connection connection = dataSource.getConnection();
         try {
             if(checkAdressExists(addressId)){
-                return Response.status(Response.Status.NOT_FOUND).build();
+                return Response.status(Response.Status.BAD_REQUEST).entity("Diese Adresse existiert nicht!").build();
             }
 
-            Connection connection = dataSource.getConnection();
+            connection.setAutoCommit(false);
             PreparedStatement preparedStatement;
 
             //Fahrschule speichern
@@ -43,21 +44,23 @@ public class AdminService {
 
             //Adresse speichern
             String sql2 = "INSERT INTO Fahrschule_besitzt_Adresse (Fahrschule, Adresse) VALUES (?, ?)";
-            connection = dataSource.getConnection();
 
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, email);
             preparedStatement.setString(2, addressId);
 
             preparedStatement.executeUpdate();
-            preparedStatement.closeOnCompletion();
+            //preparedStatement.closeOnCompletion();
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "fahrschulen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
-        }
-        catch (SQLException e) {
+        } catch (SQLException e){
             e.printStackTrace();
+            connection.rollback();
             return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        finally {
+            connection.close();
         }
     }
 
@@ -113,6 +116,161 @@ public class AdminService {
             e.printStackTrace();
             return Response.status(Response.Status.BAD_REQUEST).build();
         }
+    }
+
+
+
+    public Response createUebung(String fahrschuleid, String themabezeichnung, String dauer, String verpflichtend, String admin) throws SQLException{
+        try{
+            String fahrschuleEmail;
+
+            try{
+                //Check Fahrschule
+                String sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.rowId";
+                Map<String, Object> e = getStringObjectMap(fahrschuleid, sql);
+                fahrschuleEmail = e.get("Email").toString();
+
+                //Check if Admin at Fahrschule
+                sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.Email AND Fahrschule.Admin = ?";
+                if(getStringObjectMap(fahrschuleEmail, sql, admin)){
+                    return Response.status(Response.Status.NOT_FOUND).build();
+                }
+
+            }catch(SQLException e){
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            Connection connection = dataSource.getConnection();
+            PreparedStatement preparedStatement;
+
+            //Uebung speichern
+            String sql = "INSERT INTO theoretische_Uebung (Pflicht, Dauer, Thema, Fahrschule) VALUES (?, ?, ?, ?)";
+
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(1, verpflichtend);
+            preparedStatement.setString(2, dauer);
+            preparedStatement.setString(3, themabezeichnung);
+            preparedStatement.setString(4, fahrschuleEmail);
+
+            preparedStatement.executeUpdate();
+            Long id = preparedStatement.getGeneratedKeys().getLong(1);
+            preparedStatement.closeOnCompletion();
+
+
+            return Response.status(Response.Status.CREATED).header("Location",
+                    "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
+        } catch (SQLException e){
+            e.printStackTrace();
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+    }
+
+    public Response createPruefung(String fahrschuelerid, String gebuehr, String typ, String ergebnis, String admin) throws SQLException{
+        Connection connection = dataSource.getConnection();
+        try{
+            String fahrschueler;
+
+            try{
+                //Check Fahrschueler
+                String sql = "SELECT Schueler.Email FROM Schueler WHERE ? = Schueler.rowId";
+                Map<String, Object> e = getStringObjectMap(fahrschuelerid, sql);
+                fahrschueler = e.get("Email").toString();
+                if(e.isEmpty()){
+                    return Response.status(Response.Status.BAD_REQUEST).entity("Diese id existiert nicht").build();
+                }
+            }catch(SQLException e){
+                return Response.status(Response.Status.BAD_REQUEST).build();
+            }
+
+            connection.setAutoCommit(false);
+            PreparedStatement preparedStatement;
+
+            //Pruefung speichern
+            String sql = "INSERT INTO Pruefung (Typ, Teilnahmegebuehr) VALUES (?, ?)";
+
+            preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.setString(2, gebuehr);
+            preparedStatement.setString(1, typ);
+
+            preparedStatement.executeUpdate();
+            Long id = preparedStatement.getGeneratedKeys().getLong(1);
+            //preparedStatement.closeOnCompletion();
+
+            //Pruefungsteilnahme speichern
+            String sql2 = "INSERT INTO Schueler_Belegt_Pruefung (Schueler, Pruefung, Erfolgreich) VALUES (?, ?, ?)";
+
+            System.out.println(ergebnis);
+            preparedStatement = connection.prepareStatement(sql2);
+            preparedStatement.setString(1, fahrschueler);
+            preparedStatement.setString(2, id.toString());
+            preparedStatement.setString(3, ergebnis);
+
+            preparedStatement.executeUpdate();
+            //preparedStatement.closeOnCompletion();
+            connection.commit();
+
+
+            return Response.status(Response.Status.CREATED).header("Location",
+                    "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
+        } catch (SQLException e){
+            e.printStackTrace();
+            connection.rollback();
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        finally {
+            connection.close();
+        }
+    }
+
+    public Response getPruefung(Integer fahrschuelerid, Double gebuehr, Boolean typ, Boolean ergebnis) throws SQLException{
+        String sql = "SELECT Schueler_Belegt_Pruefung.Schueler, Schueler_Belegt_Pruefung.Erfolgreich, Pruefung.Teilnahmegebuehr, Pruefung.Typ, Schueler.ROWID AS schuelerID\n" +
+                "FROM Schueler_Belegt_Pruefung, Pruefung, Schueler\n" +
+                "WHERE Pruefung.id = Schueler_Belegt_Pruefung.Pruefung\n" +
+                "AND Schueler.Email = Schueler_Belegt_Pruefung.Schueler\n" +
+                "AND (Pruefung.Typ = ? OR ? IS NULL)\n" +
+                "AND (schuelerID = ? OR ? IS NULL)\n" +
+                "AND (Pruefung.Teilnahmegebuehr >= ? OR ? IS NULL)\n" +
+                "AND (Schueler_Belegt_Pruefung.Erfolgreich = ? OR ? IS NULL);";
+
+        Connection connection = dataSource.getConnection();
+        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
+        preparedStatement2.setObject(1, typ);
+        preparedStatement2.setObject(2, typ);
+        preparedStatement2.setObject(3, fahrschuelerid);
+        preparedStatement2.setObject(4, fahrschuelerid);
+        preparedStatement2.setObject(5, gebuehr);
+        preparedStatement2.setObject(6, gebuehr);
+        preparedStatement2.setObject(7, ergebnis);
+        preparedStatement2.setObject(8, ergebnis);
+        ResultSet resultSet = preparedStatement2.executeQuery();
+        ResultSetMetaData metaData = resultSet.getMetaData();
+
+        String[] strings = null;
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 1; i <= metaData.getColumnCount();i++) {
+            String name = metaData.getColumnName(i);
+            list.add(name);
+        }
+
+        strings = list.toArray(String[]::new);
+        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
+        System.out.println(entities);
+
+        List<Pruefung> pruefung = new ArrayList<>();
+
+        entities.forEach(e -> {
+            Pruefung tempPruefung = new Pruefung();
+
+            tempPruefung.setFahrschuelerid(Integer.valueOf(e.get("schuelerID").toString()));
+            tempPruefung.setTyp(e.get("Typ").toString().equals("0"));
+            tempPruefung.setErgebnis(e.get("Erfolgreich").toString().equals("0"));
+            tempPruefung.setGebuehr(Double.valueOf(e.get("Teilnahmegebuehr").toString()));
+
+            pruefung.add(tempPruefung);
+        });
+        preparedStatement2.closeOnCompletion();
+
+        return Response.status(Response.Status.OK).entity(pruefung).build();
     }
 
     private boolean getStringObjectMap(String fahrschuleEmail, String sql, String admin) throws SQLException {
@@ -179,7 +337,6 @@ public class AdminService {
 
     private List<Map<String, Object>> resultSetToList(String[] tablenames, ResultSet resultSet) throws SQLException {
         List<Map<String, Object>> entities = new ArrayList<>();
-        Map<String, Object> entity;
         getEntities(tablenames, resultSet, entities);
         resultSet.close();
         return entities;
@@ -195,155 +352,5 @@ public class AdminService {
             }
             entities.add(entity);
         }
-    }
-
-    public Response createUebung(String fahrschuleid, String themabezeichnung, String dauer, String verpflichtend, String admin) throws SQLException{
-        try{
-            String fahrschuleEmail;
-
-            try{
-                //Check Fahrschule
-                String sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.rowId";
-                Map<String, Object> e = getStringObjectMap(fahrschuleid, sql);
-                fahrschuleEmail = e.get("Email").toString();
-
-                //Check if Admin at Fahrschule
-                sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.Email AND Fahrschule.Admin = ?";
-                if(getStringObjectMap(fahrschuleEmail, sql, admin)){
-                    return Response.status(Response.Status.NOT_FOUND).build();
-                }
-
-            }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
-            }
-
-            System.out.println(themabezeichnung);
-            System.out.println(verpflichtend);
-            System.out.println(dauer);
-            System.out.println(fahrschuleEmail);
-
-            Connection connection = dataSource.getConnection();
-            PreparedStatement preparedStatement;
-
-            //Uebung speichern
-            String sql = "INSERT INTO theoretische_Uebung (Pflicht, Dauer, Thema, Fahrschule) VALUES (?, ?, ?, ?)";
-
-            preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, verpflichtend);
-            preparedStatement.setString(2, dauer);
-            preparedStatement.setString(3, themabezeichnung);
-            preparedStatement.setString(4, fahrschuleEmail);
-
-            preparedStatement.executeUpdate();
-            Long id = preparedStatement.getGeneratedKeys().getLong(1);
-            preparedStatement.closeOnCompletion();
-
-
-            return Response.status(Response.Status.CREATED).header("Location",
-                    "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
-        } catch (SQLException e){
-            e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-    }
-
-    public Response createPruefung(String fahrschuelerid, String gebuehr, String typ, String ergebnis, String admin) throws SQLException{
-        try{
-            String fahrschueler;
-
-            try{
-                //Check Fahrschueler
-                String sql = "SELECT Schueler.Email FROM Schueler WHERE ? = Schueler.rowId";
-                Map<String, Object> e = getStringObjectMap(fahrschuelerid, sql);
-                fahrschueler = e.get("Email").toString();
-            }catch(SQLException e){
-                return Response.status(Response.Status.NOT_FOUND).build();
-            }
-
-
-            Connection connection = dataSource.getConnection();
-            PreparedStatement preparedStatement;
-
-            //Pruefung speichern
-            String sql = "INSERT INTO Pruefung (Typ, Teilnahmegebuehr) VALUES (?, ?)";
-
-            preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(2, gebuehr);
-            preparedStatement.setString(1, typ);
-
-            preparedStatement.executeUpdate();
-            Long id = preparedStatement.getGeneratedKeys().getLong(1);
-            preparedStatement.closeOnCompletion();
-
-            //Pruefungsteilnahme speichern
-            String sql2 = "INSERT INTO Schueler_Belegt_Pruefung (Schueler, Pruefung, Erfolgreich) VALUES (?, ?, ?)";
-
-            System.out.println(ergebnis);
-            preparedStatement = connection.prepareStatement(sql2);
-            preparedStatement.setString(1, fahrschueler);
-            preparedStatement.setString(2, id.toString());
-            preparedStatement.setString(3, ergebnis);
-
-            preparedStatement.executeUpdate();
-            preparedStatement.closeOnCompletion();
-
-
-            return Response.status(Response.Status.CREATED).header("Location",
-                    "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
-        } catch (SQLException e){
-            e.printStackTrace();
-            return Response.status(Response.Status.BAD_REQUEST).build();
-        }
-    }
-
-    public Response getPruefung(Integer fahrschuelerid, Double gebuehr, Boolean typ, Boolean ergebnis) throws SQLException{
-        String sql = "SELECT Schueler_Belegt_Pruefung.Schueler, Schueler_Belegt_Pruefung.Erfolgreich, Pruefung.Teilnahmegebuehr, Pruefung.Typ, Schueler.ROWID AS schuelerID\n" +
-                "FROM Schueler_Belegt_Pruefung, Pruefung, Schueler\n" +
-                "WHERE Pruefung.id = Schueler_Belegt_Pruefung.Pruefung\n" +
-                "AND Schueler.Email = Schueler_Belegt_Pruefung.Schueler\n" +
-                "AND (Pruefung.Typ = ? OR ? IS NULL)\n" +
-                "AND (schuelerID = ? OR ? IS NULL)\n" +
-                "AND (Pruefung.Teilnahmegebuehr >= ? OR ? IS NULL)\n" +
-                "AND (Schueler_Belegt_Pruefung.Erfolgreich = ? OR ? IS NULL);";
-
-        Connection connection = dataSource.getConnection();
-        PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setObject(1, typ);
-        preparedStatement2.setObject(2, typ);
-        preparedStatement2.setObject(3, fahrschuelerid);
-        preparedStatement2.setObject(4, fahrschuelerid);
-        preparedStatement2.setObject(5, gebuehr);
-        preparedStatement2.setObject(6, gebuehr);
-        preparedStatement2.setObject(7, ergebnis);
-        preparedStatement2.setObject(8, ergebnis);
-        ResultSet resultSet = preparedStatement2.executeQuery();
-        ResultSetMetaData metaData = resultSet.getMetaData();
-
-        String[] strings = null;
-        ArrayList<String> list = new ArrayList<>();
-        for (int i = 1; i <= metaData.getColumnCount();i++) {
-            String name = metaData.getColumnName(i);
-            list.add(name);
-        }
-
-        strings = list.toArray(String[]::new);
-        List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-        System.out.println(entities);
-
-        List<Pruefung> pruefung = new ArrayList<>();
-
-        entities.forEach(e -> {
-            Pruefung tempPruefung = new Pruefung();
-
-            tempPruefung.setFahrschuelerid(Integer.valueOf(e.get("schuelerID").toString()));
-            tempPruefung.setTyp(e.get("Typ").toString().equals("0"));
-            tempPruefung.setErgebnis(e.get("Erfolgreich").toString().equals("0"));
-            tempPruefung.setGebuehr(Double.valueOf(e.get("Teilnahmegebuehr").toString()));
-
-            pruefung.add(tempPruefung);
-        });
-        preparedStatement2.closeOnCompletion();
-
-        return Response.status(Response.Status.OK).entity(pruefung).build();
     }
 }

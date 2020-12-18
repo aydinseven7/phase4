@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS "Fahrstunde" (
 	"Fahrschule"	INTEGER NOT NULL,
 	"Dauer"	INTEGER NOT NULL CHECK("Dauer" > 0 AND "Dauer" % 45 = 0),
 	"Typ"	INTEGER NOT NULL CHECK(trim("Typ") NOT LIKE '' AND "Typ" GLOB '*[^-~]*' AND "Typ" NOT GLOB '*[0-9]*'),
-	"Preis"	Float NOT NULL CHECK("Preis" > 0),
+	"Preis"	Float NOT NULL CHECK("Preis" > 0 AND "Preis" = round("Preis", 2)),
 	"id"	INTEGER UNIQUE,
 	PRIMARY KEY("id" AUTOINCREMENT),
 	FOREIGN KEY("Fahrschule") REFERENCES "Fahrschule"("Email") ON DELETE CASCADE ON UPDATE CASCADE,
@@ -222,19 +222,5 @@ BEFORE INSERT ON Oeffnungszeiten FOR EACH ROW
 BEGIN
 SELECT RAISE(ABORT, 'Die Öffnungszeit liegt nach der Schließung!') WHERE EXISTS (SELECT id
 	FROM Oeffnungszeiten
-	WHERE (time(Anfang) - time(Ende)>0));
+	WHERE ((time(Anfang) - time(Ende))>0));
 END;
-
-DROP TRIGGER IF EXISTS "roundingLesson";
-CREATE TRIGGER roundingLesson
-AFTER INSERT ON Fahrstunde FOR EACH ROW
-BEGIN
-	UPDATE Fahrstunde SET 'Preis' = round(Preis, 2);
-END;
-
-/*DROP TRIGGER IF EXISTS "roundingExam";
-CREATE TRIGGER roundingExam
-AFTER INSERT ON Pruefung FOR EACH ROW
-BEGIN
-	UPDATE Pruefung SET 'Teilnahmegebühr' = round(Teilnahmegebühr, 2);
-END;*/

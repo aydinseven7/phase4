@@ -31,18 +31,18 @@ public class AdminController {
     public Response addFahrschule(@FormDataParam("email") String email,
                                   @FormDataParam("website") String website,
                                   @FormDataParam("bezeichnung") String bezeichnung,
-                                  @FormDataParam("adresseid") String adresseid) throws SQLException {
+                                  @FormDataParam("adresseid") Integer adresseid) throws SQLException {
 
         AdminService adminService = new AdminService(dataSource);
 
         return adminService.createFahrschule(email, website, bezeichnung, adresseid, securityContext.getUserPrincipal().getName());
     }
 
-    @Path("/fahrzeug")
+    @Path("/fahrzeuge")
     @POST
     @RolesAllowed({"ADMIN"})
-    public Response addFahrzeug(@FormDataParam("fahrschuleid") String fahrschuleid,
-                                  @FormDataParam("fahrzeugklasse") String fahrzeugklasse,
+    public Response addFahrzeug(@FormDataParam("fahrschuleid") Integer fahrschuleid,
+                                  @FormDataParam("fahrzeugklasse") Integer fahrzeugklasse,
                                   @FormDataParam("kennzeichen") String kennzeichen,
                                   @FormDataParam("hudatum") String hudatum,
                                   @FormDataParam("erstzulassung") String erst) throws SQLException {
@@ -55,10 +55,10 @@ public class AdminController {
     @Path("/theorieuebungen")
     @POST
     @RolesAllowed({"ADMIN"})
-    public Response addUebung(@FormDataParam("fahrschuleid") String fahrschuleid,
+    public Response addUebung(@FormDataParam("fahrschuleid") Integer fahrschuleid,
                                 @FormDataParam("themabezeichnung") String themabezeichnung,
-                                @FormDataParam("dauer") String dauer,
-                                @FormDataParam("verpflichtend") String verpflichtend) throws SQLException {
+                                @FormDataParam("dauer") Integer dauer,
+                                @FormDataParam("verpflichtend") Boolean verpflichtend) throws SQLException {
 
         AdminService adminService = new AdminService(dataSource);
 
@@ -68,10 +68,10 @@ public class AdminController {
     @Path("/pruefungen")
     @POST
     @RolesAllowed({"ADMIN"})
-    public Response addPruefung(@FormDataParam("fahrschuelerid") String fahrschuelerid,
-                              @FormDataParam("gebuehr") String gebuehr,
-                              @FormDataParam("typ") String typ,
-                              @FormDataParam("ergebnis") String ergebnis) throws SQLException {
+    public Response addPruefung(@FormDataParam("fahrschuelerid") Integer fahrschuelerid,
+                              @FormDataParam("gebuehr") Double gebuehr,
+                              @FormDataParam("typ") Boolean typ,
+                              @FormDataParam("ergebnis") Boolean ergebnis) throws SQLException {
 
         AdminService adminService = new AdminService(dataSource);
 

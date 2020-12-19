@@ -38,11 +38,11 @@ public class UserController {
     @Path("/fahrschueler")
     @POST
     public Response addFahrschueler(@FormDataParam("email") String email,
-                                    @FormDataParam("password") String password,
+                                    @FormDataParam("passwort") String password,
                                     @FormDataParam("vorname") String vorname,
                                     @FormDataParam("nachname") String nachname,
                                     @FormDataParam("geschlecht") String geschlecht,
-                                    @FormDataParam("addressId") String addressId) throws SQLException {
+                                    @FormDataParam("addressId") Integer addressId) throws SQLException {
 
         UserService userService = new UserService(dataSource);
 
@@ -52,7 +52,7 @@ public class UserController {
     @Path("/admins")
     @POST
     public Response addAdmin(@FormDataParam("email") String email,
-                                    @FormDataParam("password") String password,
+                                    @FormDataParam("passwort") String password,
                                     @FormDataParam("vorname") String vorname,
                                     @FormDataParam("nachname") String nachname,
                                     @FormDataParam("telefonnummer") String telefonnummer) throws SQLException {

@@ -29,7 +29,7 @@ public class SchuelerController {
     @Path("/theorieuebungen/{theorieuebungid}/fahrschueler")
     @POST
     @RolesAllowed({"SCHUELER"})
-    public Response addFahrschuelerToUebung(@PathParam("theorieuebungid") String theorieuebungid) throws SQLException {
+    public Response addFahrschuelerToUebung(@PathParam("theorieuebungid") Integer theorieuebungid) throws SQLException {
 
         SchuelerService schuelerService = new SchuelerService(dataSource);
 

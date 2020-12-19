@@ -30,10 +30,10 @@ public class LehrerController {
     @POST
     @RolesAllowed({"FAHRLEHRER"})
     public Response addFahrstunde(@FormDataParam("typ") String typ,
-                                  @FormDataParam("dauer") String dauer,
-                                  @FormDataParam("preis") String preis,
-                                  @FormDataParam("fahrzeugid") String fahrzeugid,
-                                  @FormDataParam("fahrschuelerid") String fahrschuelerid) throws SQLException {
+                                  @FormDataParam("dauer") Integer dauer,
+                                  @FormDataParam("preis") Double preis,
+                                  @FormDataParam("fahrzeugid") Integer fahrzeugid,
+                                  @FormDataParam("fahrschuelerid") Integer fahrschuelerid) throws SQLException {
 
         LehrerService lehrerService = new LehrerService(dataSource);
 
@@ -43,7 +43,7 @@ public class LehrerController {
     @Path("/fahrstunden")
     @GET
     @RolesAllowed({"FAHRLEHRER"})
-    public Response addFahrstunde(@QueryParam("dauer") String dauer) throws SQLException {
+    public Response addFahrstunde(@QueryParam("dauer") Integer dauer) throws SQLException {
 
         LehrerService lehrerService = new LehrerService(dataSource);
 

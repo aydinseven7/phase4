@@ -22,7 +22,7 @@ public class LehrerService{
         this.dataSource = dataSource;
     }
 
-    public Response createFahrstunde(String typ, String dauer, String preis, String fahrschuelerid, String fahrzeugid, String fahrlehrer) throws SQLException{
+    public Response createFahrstunde(String typ, Integer dauer, Double preis, Integer fahrschuelerid, Integer fahrzeugid, String fahrlehrer) throws SQLException{
         try{
             String fahrschueler;
 
@@ -60,11 +60,11 @@ public class LehrerService{
 
             preparedStatement = connection.prepareStatement(sql);
             preparedStatement.setString(1, fahrschueler);
-            preparedStatement.setString(2, fahrlehrer);
+            preparedStatement.setObject(2, fahrlehrer);
             preparedStatement.setString(3, fahrschule);
-            preparedStatement.setString(4, dauer);
+            preparedStatement.setObject(4, dauer);
             preparedStatement.setString(5, typ);
-            preparedStatement.setString(6, preis);
+            preparedStatement.setObject(6, preis);
 
             preparedStatement.executeUpdate();
             Long id = preparedStatement.getGeneratedKeys().getLong(1);
@@ -80,7 +80,7 @@ public class LehrerService{
         }
     }
 
-    public Response getFahrstunde(String dauer, String fahrlehrer) throws SQLException{
+    public Response getFahrstunde(Integer dauer, String fahrlehrer) throws SQLException{
         try {
             String sql = "SELECT Fahrschule.ROWID AS fahrschulid, Schueler.ROWID AS schuelerid, Fahrstunde.Dauer, Fahrstunde.Preis, Fahrstunde.Typ\n" +
                     "FROM Fahrschule, Fahrstunde, Schueler\n" +
@@ -149,10 +149,10 @@ public class LehrerService{
         return entities.isEmpty();
     }
 
-    private Map<String, Object> getStringObjectMap(String rowId, String sql) throws SQLException {
+    private Map<String, Object> getStringObjectMap(Integer rowId, String sql) throws SQLException {
         Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, rowId);
+        preparedStatement2.setObject(1, rowId);
         ResultSet resultSet = preparedStatement2.executeQuery();
         ResultSetMetaData metaData = resultSet.getMetaData();
 

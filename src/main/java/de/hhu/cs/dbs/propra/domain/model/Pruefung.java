@@ -5,8 +5,8 @@ import lombok.Data;
 
 @Data
 public class Pruefung {
-    private int fahrschuelerid;
-    private double gebuehr;
-    private boolean typ;
-    private boolean ergebnis;
+    private Integer fahrschuelerid;
+    private Double gebuehr;
+    private Boolean typ;
+    private Boolean ergebnis;
 }

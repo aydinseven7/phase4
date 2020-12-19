@@ -19,11 +19,13 @@ public class AdminService{
         this.dataSource = dataSource;
     }
 
-    public Response createFahrschule(String email, String website, String bezeichnung, String addressId, String adminEmail) throws SQLException {
+    public Response createFahrschule(String email, String website, String bezeichnung, Integer addressId, String adminEmail) throws SQLException {
         Connection connection = dataSource.getConnection();
         try {
             if(checkAdressExists(addressId)){
-                return Response.status(Response.Status.BAD_REQUEST).entity("Diese Adresse existiert nicht!").build();
+                Map<String, Object> entity = new HashMap<>();
+                entity.put("message", "Diese Adresse existiert nicht!");
+                return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
             connection.setAutoCommit(false);
@@ -47,23 +49,27 @@ public class AdminService{
 
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, email);
-            preparedStatement.setString(2, addressId);
+            preparedStatement.setObject(2, addressId);
 
             preparedStatement.executeUpdate();
+            connection.commit();
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "fahrschulen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
             e.printStackTrace();
             connection.rollback();
-            return Response.status(Response.Status.BAD_REQUEST).entity("Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage()).build();
+            Map<String, Object> entity = new HashMap<>();
+            entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
+            return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
         finally {
             connection.close();
         }
     }
 
-    public Response createFahrzeug(String fahrschuleid, String fahrzeugklasse, String kennzeichen, String hudatum, String erst, String admin){
+    public Response createFahrzeug(Integer fahrschuleid, Integer fahrzeugklasseid, String kennzeichen, String hudatum, String erst, String admin) throws SQLException{
+        Connection connection = dataSource.getConnection();
         try {
             String fahrschuleEmail;
             String klasse;
@@ -71,7 +77,7 @@ public class AdminService{
             try{
                 //Check Fahrschule
                 String sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.rowId";
-                Map<String, Object> e = getStringObjectMap(fahrschuleid, sql);
+                Map<String, Object> e = getStringObjectMap(fahrschuleid, sql, connection);
                 fahrschuleEmail = e.get("Email").toString();
 
                 //Check if Admin at Fahrschule
@@ -84,7 +90,7 @@ public class AdminService{
 
                 //Check Fahrzeugklasse
                 sql = "SELECT Fahrzeugklasse.Bezeichnung FROM Fahrzeugklasse WHERE ? = Fahrzeugklasse.rowId";
-                Map<String, Object> e1 = getStringObjectMap(fahrzeugklasse, sql);
+                Map<String, Object> e1 = getStringObjectMap(fahrzeugklasseid, sql, connection);
                 klasse = e1.get("Bezeichnung").toString();
 
             }catch(SQLException e){
@@ -94,7 +100,6 @@ public class AdminService{
                 return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
-            Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement;
 
             //Fahrzeug speichern
@@ -125,21 +130,22 @@ public class AdminService{
 
 
 
-    public Response createUebung(String fahrschuleid, String themabezeichnung, String dauer, String verpflichtend, String admin){
+    public Response createUebung(Integer fahrschuleid, String themabezeichnung, Integer dauer, Boolean verpflichtend, String admin) throws SQLException{
+        Connection connection = dataSource.getConnection();
         try{
             String fahrschuleEmail;
 
             try{
                 //Check Fahrschule
                 String sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.rowId";
-                Map<String, Object> e = getStringObjectMap(fahrschuleid, sql);
+                Map<String, Object> e = getStringObjectMap(fahrschuleid, sql, connection);
                 fahrschuleEmail = e.get("Email").toString();
 
                 //Check if Admin at Fahrschule
                 sql = "SELECT Fahrschule.Email FROM Fahrschule WHERE ? = Fahrschule.Email AND Fahrschule.Admin = ?";
                 if(getStringObjectMap(fahrschuleEmail, sql, admin)){
                     Map<String, Object> entity = new HashMap<>();
-                    entity.put("message", "Dieser Admin arbeitet nicht an diesr Fahrschule!");
+                    entity.put("message", "Dieser Admin arbeitet nicht an dieser Fahrschule!");
                     return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
                 }
 
@@ -150,15 +156,22 @@ public class AdminService{
                 return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
-            Connection connection = dataSource.getConnection();
+            Integer pflicht = 0;
+            if(verpflichtend != null) {
+                if(verpflichtend) { pflicht = 1;}
+                if(!verpflichtend) { pflicht = 0;}}
+            else{
+                pflicht = null;
+            }
+
             PreparedStatement preparedStatement;
 
             //Uebung speichern
             String sql = "INSERT INTO theoretische_Uebung (Pflicht, Dauer, Thema, Fahrschule) VALUES (?, ?, ?, ?)";
 
             preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(1, verpflichtend);
-            preparedStatement.setString(2, dauer);
+            preparedStatement.setObject(1, pflicht);
+            preparedStatement.setObject(2, dauer);
             preparedStatement.setString(3, themabezeichnung);
             preparedStatement.setString(4, fahrschuleEmail);
 
@@ -177,7 +190,7 @@ public class AdminService{
         }
     }
 
-    public Response createPruefung(String fahrschuelerid, String gebuehr, String typ, String ergebnis, String admin) throws SQLException{
+    public Response createPruefung(Integer fahrschuelerid, Double gebuehr, Boolean typ, Boolean ergebnis, String admin) throws SQLException{
         Connection connection = dataSource.getConnection();
         try{
             String fahrschueler;
@@ -185,7 +198,7 @@ public class AdminService{
             try{
                 //Check Fahrschueler
                 String sql = "SELECT Schueler.Email FROM Schueler WHERE ? = Schueler.rowId";
-                Map<String, Object> e = getStringObjectMap(fahrschuelerid, sql);
+                Map<String, Object> e = getStringObjectMap(fahrschuelerid, sql, connection);
                 fahrschueler = e.get("Email").toString();
                 if(e.isEmpty()){
                     Map<String, Object> entity = new HashMap<>();
@@ -206,8 +219,8 @@ public class AdminService{
             String sql = "INSERT INTO Pruefung (Typ, Teilnahmegebuehr) VALUES (?, ?)";
 
             preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(2, gebuehr);
-            preparedStatement.setString(1, typ);
+            preparedStatement.setObject(2, gebuehr);
+            preparedStatement.setObject(1, typ);
 
             preparedStatement.executeUpdate();
             Long id = preparedStatement.getGeneratedKeys().getLong(1);
@@ -219,14 +232,14 @@ public class AdminService{
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, fahrschueler);
             preparedStatement.setString(2, id.toString());
-            preparedStatement.setString(3, ergebnis);
+            preparedStatement.setObject(3, ergebnis);
 
             preparedStatement.executeUpdate();
             connection.commit();
 
 
             return Response.status(Response.Status.CREATED).header("Location",
-                    "theorieuebungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
+                    "pruefungen/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         } catch (SQLException e){
             connection.rollback();
             e.printStackTrace();
@@ -250,16 +263,31 @@ public class AdminService{
                     "AND (Pruefung.Teilnahmegebuehr >= ? OR ? IS NULL)\n" +
                     "AND (Schueler_Belegt_Pruefung.Erfolgreich = ? OR ? IS NULL);";
 
+            Integer t = 0;
+            if(typ != null) {
+                if(typ) { t = 1;}
+                if(!typ) { t = 0;}}
+            else{
+                t = null;
+            }
+            Integer g = 0;
+            if(ergebnis != null) {
+                if(ergebnis) { g = 1;}
+                if(!ergebnis) { g = 0;}}
+            else{
+                g = null;
+            }
+
             Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-            preparedStatement2.setObject(1, typ);
-            preparedStatement2.setObject(2, typ);
+            preparedStatement2.setObject(1, t);
+            preparedStatement2.setObject(2, t);
             preparedStatement2.setObject(3, fahrschuelerid);
             preparedStatement2.setObject(4, fahrschuelerid);
             preparedStatement2.setObject(5, gebuehr);
             preparedStatement2.setObject(6, gebuehr);
-            preparedStatement2.setObject(7, ergebnis);
-            preparedStatement2.setObject(8, ergebnis);
+            preparedStatement2.setObject(7, g);
+            preparedStatement2.setObject(8, g);
             ResultSet resultSet = preparedStatement2.executeQuery();
             ResultSetMetaData metaData = resultSet.getMetaData();
 
@@ -272,16 +300,16 @@ public class AdminService{
 
             strings = list.toArray(String[]::new);
             List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-            System.out.println(entities);
 
             List<Pruefung> pruefung = new ArrayList<>();
 
             entities.forEach(e -> {
                 Pruefung tempPruefung = new Pruefung();
+                e.get("Erfolgreich");
 
                 tempPruefung.setFahrschuelerid(Integer.valueOf(e.get("schuelerID").toString()));
-                tempPruefung.setTyp(e.get("Typ").toString().equals("0"));
-                tempPruefung.setErgebnis(e.get("Erfolgreich").toString().equals("0"));
+                tempPruefung.setTyp(e.get("Typ").toString().equals("1"));
+                tempPruefung.setErgebnis(e.get("Erfolgreich").toString().equals("1"));
                 tempPruefung.setGebuehr(Double.valueOf(e.get("Teilnahmegebuehr").toString()));
 
                 pruefung.add(tempPruefung);
@@ -317,10 +345,9 @@ public class AdminService{
         return entities.isEmpty();
     }
 
-    private Map<String, Object> getStringObjectMap(String rowId, String sql) throws SQLException {
-        Connection connection = dataSource.getConnection();
+    private Map<String, Object> getStringObjectMap(Integer rowId, String sql, Connection connection) throws SQLException {
         PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, rowId);
+        preparedStatement2.setObject(1, rowId);
         ResultSet resultSet = preparedStatement2.executeQuery();
         ResultSetMetaData metaData = resultSet.getMetaData();
 
@@ -336,12 +363,12 @@ public class AdminService{
         return entities.get(0);
     }
 
-    private boolean checkAdressExists(String adressId) throws SQLException {
+    private boolean checkAdressExists(Integer adressId) throws SQLException {
         String sql = "SELECT ID FROM Adresse WHERE ID = ?";
 
         Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
-        preparedStatement.setString(1, adressId);
+        preparedStatement.setObject(1, adressId);
         ResultSet resultSet = preparedStatement.executeQuery();
         ResultSetMetaData metaData = resultSet.getMetaData();
 

@@ -24,62 +24,61 @@ public class UserService {
         this.dataSource = dataSource;
     }
 
-    public Response createFahrschueler(String email, String password, String vorname, String nachname, String geschlecht, String addressId) throws SQLException {
-
+    public Response createFahrschueler(String email, String password, String vorname, String nachname, String geschlecht, Integer addressId) throws SQLException {
+        Connection connection = dataSource.getConnection();
         // User speichern
         try {
-            addUser(email, password, vorname, nachname);
+            connection.setAutoCommit(false);
+            addUser(email, password, vorname, nachname, connection);
 
             if(checkAdressExists(addressId)){
                 Map<String, Object> entity = new HashMap<>();
                 entity.put("message", "Die angegebene Adresse existiert nicht!");
                 return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
-
-            Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement;
 
             //Fahrschueler speichern
-
             String sql2 = "INSERT INTO Schueler (Email, Geschlecht, Adresse) VALUES (?, ?, ?)";
-
 
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, email);
             preparedStatement.setString(2, geschlecht);
-            preparedStatement.setString(3, addressId);
+            preparedStatement.setObject(3, addressId);
 
             preparedStatement.executeUpdate();
 
             Long id = preparedStatement.getGeneratedKeys().getLong(1);
 
-            preparedStatement.closeOnCompletion();
+            connection.commit();
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "fahrschueler/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         }
         catch (SQLException e) {
             e.printStackTrace();
+            connection.rollback();
             Map<String, Object> entity = new HashMap<>();
             entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
             return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
+        finally {
+            connection.close();
+        }
     }
 
     public Response createAdmin(String email, String password, String vorname, String nachname, String telefonnummer) throws SQLException {
-
+        Connection connection = dataSource.getConnection();
         // User speichern
         try {
-            addUser(email, password, vorname, nachname);
+            connection.setAutoCommit(false);
+            addUser(email, password, vorname, nachname, connection);
 
-            Connection connection;
             PreparedStatement preparedStatement;
 
             //Admin speichern
-
             String sql2 = "INSERT INTO Admin (Email, Telefonnummer) VALUES (?, ?)";
 
-            connection = dataSource.getConnection();
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, email);
             preparedStatement.setString(2, telefonnummer);
@@ -87,32 +86,33 @@ public class UserService {
             preparedStatement.executeUpdate();
 
             Long id = preparedStatement.getGeneratedKeys().getLong(1);
-
-            preparedStatement.closeOnCompletion();
+            connection.commit();
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "admins/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
-        }
-        catch (SQLException e) {
+        }catch (SQLException e){
             e.printStackTrace();
+            connection.rollback();
             Map<String, Object> entity = new HashMap<>();
             entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
             return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
+        finally {
+            connection.close();
+        }
     }
     public Response createFahrlehrer(String email, String password, String vorname, String nachname, String lizenzdatum) throws SQLException {
-
+        Connection connection = dataSource.getConnection();
         // User speichern
         try {
-            addUser(email, password, vorname, nachname);
+            connection.setAutoCommit(false);
+            addUser(email, password, vorname, nachname, connection);
 
-            Connection connection;
             PreparedStatement preparedStatement;
 
             //Fahrlehrer speichern
             String sql2 = "INSERT INTO Fahrlehrer (Email, Fahrlehrerlizenz) VALUES (?, ?)";
 
-            connection = dataSource.getConnection();
             preparedStatement = connection.prepareStatement(sql2);
             preparedStatement.setString(1, email);
             preparedStatement.setString(2, lizenzdatum);
@@ -120,24 +120,26 @@ public class UserService {
             preparedStatement.executeUpdate();
 
             Long id = preparedStatement.getGeneratedKeys().getLong(1);
-
-            preparedStatement.closeOnCompletion();
+            connection.commit();
 
             return Response.status(Response.Status.CREATED).header("Location",
                     "fahrlehrer/" + URLEncoder.encode(String.valueOf(id), StandardCharsets.UTF_8)).build();
         }
         catch (SQLException e) {
             e.printStackTrace();
+            connection.rollback();
             Map<String, Object> entity = new HashMap<>();
             entity.put("message", "Die angegebenen Werte sind fehlerhaft!" + e.getLocalizedMessage());
             return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
         }
+        finally {
+            connection.close();
+        }
     }
 
-    private void addUser(String email, String password, String vorname, String nachname) throws SQLException {
+    private void addUser(String email, String password, String vorname, String nachname, Connection connection) throws SQLException {
         String sql = "INSERT INTO Nutzer (Email, Passwort, Vorname, Nachname) VALUES (?, ?, ? , ?)";
 
-        Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
         preparedStatement.setString(1, email);
         preparedStatement.setString(2, password);
@@ -145,15 +147,14 @@ public class UserService {
         preparedStatement.setString(4, nachname);
 
         preparedStatement.executeUpdate();
-        preparedStatement.closeOnCompletion();
     }
 
-    private boolean checkAdressExists(String adressId) throws SQLException {
+    private boolean checkAdressExists(Integer adressId) throws SQLException {
         String sql = "SELECT ID FROM Adresse WHERE ID = ?";
 
         Connection connection = dataSource.getConnection();
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
-        preparedStatement.setString(1, adressId);
+        preparedStatement.setObject(1, adressId);
         ResultSet resultSet = preparedStatement.executeQuery();
         ResultSetMetaData metaData = resultSet.getMetaData();
 
@@ -313,7 +314,6 @@ public class UserService {
 
             strings = list.toArray(String[]::new);
             List<Map<String, Object>> entities = resultSetToList(strings, resultSet);
-            System.out.println(entities);
 
             List<Fahrzeug> fahrzeuge = new ArrayList<>();
 
@@ -341,7 +341,7 @@ public class UserService {
 
     public Response getAdressen(String hausnummer) throws SQLException{
         try {
-            String sql = "SELECT *, Adresse.ROWID FROM Adresse WHERE Adresse.Hausnummer = ? OR ? IS NULL";
+            String sql = "SELECT *, Adresse.ROWID FROM Adresse WHERE instr(Adresse.Hausnummer,?) OR ? IS NULL";
 
             Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
@@ -394,6 +394,13 @@ public class UserService {
                     "AND (lower(theoretische_Uebung.Thema) = lower(?) OR ? IS NULL)\n" +
                     "AND (theoretische_Uebung.Pflicht = ? OR ? IS NULL)" +
                     "AND (Fahrschule.ROWID = ? OR ? IS NULL)\n";
+            Integer pflicht = 0;
+            if(verpflichtend != null) {
+                if(verpflichtend) { pflicht = 1;}
+                if(!verpflichtend) { pflicht = 0;}}
+            else{
+                pflicht = null;
+            }
 
             Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
@@ -401,8 +408,8 @@ public class UserService {
             preparedStatement2.setObject(2, dauer);
             preparedStatement2.setString(3, themabezeichnung);
             preparedStatement2.setString(4, themabezeichnung);
-            preparedStatement2.setObject(5, verpflichtend?0:1);
-            preparedStatement2.setObject(6, verpflichtend?0:1);
+            preparedStatement2.setObject(5, pflicht);
+            preparedStatement2.setObject(6, pflicht);
             preparedStatement2.setObject(7, fahrschuleid);
             preparedStatement2.setObject(8, fahrschuleid);
             ResultSet resultSet = preparedStatement2.executeQuery();
@@ -425,7 +432,7 @@ public class UserService {
 
                 tempUebung.setTheorieuebungid(Integer.valueOf(e.get("uebungID").toString()));
                 tempUebung.setFahrschuleid(Integer.valueOf(e.get("fahrschulid").toString()));
-                tempUebung.setVerpflichtend(Boolean.valueOf(e.get("Pflicht").toString().equals("0")));
+                tempUebung.setVerpflichtend(Boolean.valueOf(e.get("Pflicht").toString().equals("1")));
                 tempUebung.setDauer(Integer.valueOf(e.get("Dauer").toString()));
                 tempUebung.setThemabezeichnung(e.get("Thema").toString());
 

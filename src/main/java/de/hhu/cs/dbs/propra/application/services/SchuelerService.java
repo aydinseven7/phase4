@@ -40,10 +40,9 @@ public class SchuelerService {
         return entities.isEmpty();
     }
 
-    private Map<String, Object> getStringObjectMap(String rowId, String sql) throws SQLException {
-        Connection connection = dataSource.getConnection();
+    private Map<String, Object> getStringObjectMap(Integer rowId, String sql, Connection connection) throws SQLException {
         PreparedStatement preparedStatement2 = connection.prepareStatement(sql);
-        preparedStatement2.setString(1, rowId);
+        preparedStatement2.setObject(1, rowId);
         ResultSet resultSet = preparedStatement2.executeQuery();
         ResultSetMetaData metaData = resultSet.getMetaData();
 
@@ -101,14 +100,20 @@ public class SchuelerService {
         }
     }
 
-    public Response addFahrschuelerToUebung(String uebungid, String fahrschueler){
+    public Response addFahrschuelerToUebung(Integer uebungid, String fahrschueler){
         try{
             String uebung;
+            Connection connection = dataSource.getConnection();
             try{
                 //Check Uebung
                 String sql = "SELECT theoretische_Uebung.id FROM theoretische_Uebung WHERE ? = theoretische_Uebung.rowId";
-                Map<String, Object> e = getStringObjectMap(uebungid, sql);
+                Map<String, Object> e = getStringObjectMap(uebungid, sql, connection);
                 uebung = e.get("id").toString();
+                if(e.get("id").toString().isEmpty()){
+                    Map<String, Object> entity = new HashMap<>();
+                    entity.put("message", "Die angegebene Uebung existiert nicht!");
+                    return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
+                }
             }catch(SQLException e){
                 e.printStackTrace();
                 Map<String, Object> entity = new HashMap<>();
@@ -116,7 +121,6 @@ public class SchuelerService {
                 return Response.status(Response.Status.BAD_REQUEST).entity(entity).build();
             }
 
-            Connection connection = dataSource.getConnection();
             PreparedStatement preparedStatement;
 
             //Uebungsteilnahme speichern

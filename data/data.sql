@@ -90,5 +90,4 @@ VALUES('test@gmail.com', 0, 0),
 ("ist@test.de", 3, 4);
 
 INSERT INTO "Schueler_Belegt_Pruefung"("Schueler", "Pruefung", "Erfolgreich", "id")
-VALUES('test@gmail.com', 1, 0, 0),
-("ist@test.de", 0, 1, 1);
+VALUES("ist@test.de", 0, 1, 1);

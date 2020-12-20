@@ -199,22 +199,20 @@ Theorie-Typ=0
 Praxis-Typ=1
 Pflicht=TRUE(0) OR FALSE(1)*/
 
-/*DROP TRIGGER IF EXISTS "checkTheorie";
+DROP TRIGGER IF EXISTS "checkTheorie";
 CREATE TRIGGER checkTheorie
-BEFORE INSERT ON Schüler_Belegt_Prüfung FOR EACH ROW
+BEFORE INSERT ON Schueler_Belegt_Pruefung FOR EACH ROW
 BEGIN
 SELECT RAISE(ABORT,"Der Schüler hat noch nicht genug Pflicht-Übungen besucht!") 
 	WHERE EXISTS (SELECT Typ
-		FROM Prüfung
-		WHERE Typ = 0 AND (SELECT count(DISTINCT theoretische_Übung.Thema)
-			FROM Schüler_Belegt_Prüfung, Schüler_Belegt_Theoretische_Übung, theoretische_Übung
-			WHERE Schüler_Belegt_Theoretische_Übung.Schüler = Schüler_Belegt_Prüfung.Schüler
-				AND Prüfung.id = Schüler_Belegt_Prüfung.Prüfung
-				AND theoretische_Übung.id = Schüler_Belegt_Theoretische_Übung.theoretische_Übung
-				AND theoretische_Übung.Pflicht = 0)<3);
-END;*/
-
-/*Dieser Trigger löst nie aus, ich weiß nur nicht, warum.*/
+		FROM Pruefung
+		WHERE Typ = 0 AND ((SELECT count(DISTINCT theoretische_Uebung.Thema)
+			FROM Schueler_Belegt_Pruefung, Schueler_Belegt_Theoretische_Uebung, theoretische_Uebung
+			WHERE Schueler_Belegt_Theoretische_Uebung.Schueler = Schueler_Belegt_Pruefung.Schueler
+				AND Pruefung.id = Schueler_Belegt_Pruefung.Pruefung
+				AND theoretische_Uebung.id = Schueler_Belegt_Theoretische_Uebung.theoretische_Uebung
+				AND theoretische_Uebung.Pflicht = 0)<3));
+END;
 
 DROP TRIGGER IF EXISTS "openingTimes";
 CREATE TRIGGER openingTimes

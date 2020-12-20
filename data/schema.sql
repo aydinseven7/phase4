@@ -206,12 +206,13 @@ BEGIN
 SELECT RAISE(ABORT,"Der Schüler hat noch nicht genug Pflicht-Übungen besucht!") 
 	WHERE EXISTS (SELECT Typ
 		FROM Pruefung
-		WHERE Typ = 0 AND ((SELECT count(DISTINCT theoretische_Uebung.Thema)
-			FROM Schueler_Belegt_Pruefung, Schueler_Belegt_Theoretische_Uebung, theoretische_Uebung
+		WHERE Typ = 0 AND (SELECT count(DISTINCT theoretische_Uebung.Thema)
+			FROM Schueler_Belegt_Pruefung, Schueler_Belegt_Theoretische_Uebung, theoretische_Uebung, Pruefung
 			WHERE Schueler_Belegt_Theoretische_Uebung.Schueler = Schueler_Belegt_Pruefung.Schueler
+			  AND Pruefung.Typ = 0
 				AND Pruefung.id = Schueler_Belegt_Pruefung.Pruefung
 				AND theoretische_Uebung.id = Schueler_Belegt_Theoretische_Uebung.theoretische_Uebung
-				AND theoretische_Uebung.Pflicht = 0)<3));
+				AND theoretische_Uebung.Pflicht = 0)>3);
 END;
 
 DROP TRIGGER IF EXISTS "openingTimes";
